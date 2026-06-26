@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Finanças da Família</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <main class="container">
+        <header>
+            <h1>💰 Finanças da Família</h1>
+            <p>Registre uma movimentação em segundos</p>
+        </header>
+
+        <section class="card">
+            <input
+                id="inputMovimento"
+                type="text"
+                placeholder="Ex.: giassi 40 cc"
+                autocomplete="off"
+                autofocus>
+
+            <button id="btnContinuar">Continuar</button>
+        </section>
+    </main>
+
+    <div id="modalConfirmacao" class="modal oculto">
+        <div class="modal-card">
+            <h2>Confirmar lançamento</h2>
+
+            <div class="tipo-lancamento" id="confirmTipo"></div>
+
+            <div class="linha">
+                <strong>Descrição</strong>
+                <span id="confirmDescricao"></span>
+            </div>
+
+            <div class="linha">
+                <strong>Categoria</strong>
+                <span id="confirmCategoria"></span>
+            </div>
+
+            <div class="linha">
+                <strong>Valor</strong>
+                <span id="confirmValor"></span>
+            </div>
+
+            <div class="linha">
+                <strong>Pagamento</strong>
+                <span id="confirmPagamento"></span>
+            </div>
+
+            <div class="acoes">
+                <button id="btnEditar">Voltar</button>
+                <button id="btnConfirmar">Salvar</button>
+            </div>
+        </div>
+    </div>
+
+<script src="./services/api.js"></script>
+<script src="./app.js"></script>
+</body>
+</html>
