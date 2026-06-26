@@ -147,5 +147,3 @@ input.addEventListener("keydown", function(event) {
 btnEditar.addEventListener("click", fecharModal);
 
 btnConfirmar.addEventListener("click", salvarLancamento);
-
-Sprint 3.1 - Toast
