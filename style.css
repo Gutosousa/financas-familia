@@ -171,3 +171,60 @@ button:hover {
 #btnConfirmar {
     background: #2E7D32;
 }
+/* ==========================
+   TOAST
+========================== */
+
+.toast {
+
+    position: fixed;
+
+    left: 50%;
+
+    bottom: 30px;
+
+    transform: translateX(-50%) translateY(120px);
+
+    background: #1F2937;
+
+    color: white;
+
+    padding: 14px 22px;
+
+    border-radius: 14px;
+
+    font-size: 15px;
+
+    font-weight: 500;
+
+    box-shadow: 0 12px 30px rgba(0,0,0,.18);
+
+    opacity: 0;
+
+    transition: .35s;
+
+    z-index: 9999;
+
+    pointer-events: none;
+
+}
+
+.toast.mostrar {
+
+    opacity: 1;
+
+    transform: translateX(-50%) translateY(0);
+
+}
+
+.toast.sucesso{
+
+    background:#15803D;
+
+}
+
+.toast.erro{
+
+    background:#B91C1C;
+
+}

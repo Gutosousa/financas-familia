@@ -1,7 +1,7 @@
 /*
 ====================================
 Finanças da Família
-Versão: 0.2.4
+Versão: 0.3.1
 Arquivo: app.js
 ====================================
 */
@@ -19,13 +19,17 @@ const confirmCategoria = document.getElementById("confirmCategoria");
 const confirmValor = document.getElementById("confirmValor");
 const confirmPagamento = document.getElementById("confirmPagamento");
 
+const toast = document.getElementById("toast");
+const toastMensagem = document.getElementById("toastMensagem");
+
 let dadosInterpretados = null;
+let toastTimer = null;
 
 async function continuar() {
     const texto = input.value.trim();
 
     if (texto === "") {
-        alert("Digite uma movimentação.");
+        mostrarToast("Digite uma movimentação.", "erro");
         input.focus();
         return;
     }
@@ -39,7 +43,7 @@ async function continuar() {
     botao.disabled = false;
 
     if (!resposta || !resposta.ok) {
-        alert("Não consegui interpretar essa movimentação.");
+        mostrarToast("Não consegui interpretar essa movimentação.", "erro");
         input.focus();
         return;
     }
@@ -75,7 +79,7 @@ function fecharModal() {
 
 async function salvarLancamento() {
     if (!dadosInterpretados) {
-        alert("Nenhum lançamento para salvar.");
+        mostrarToast("Nenhum lançamento para salvar.", "erro");
         return;
     }
 
@@ -93,11 +97,11 @@ async function salvarLancamento() {
 
     if (!resposta || !resposta.ok) {
         btnConfirmar.textContent = "Salvar";
-        alert("Não consegui salvar o lançamento.");
+        mostrarToast("Não consegui salvar o lançamento.", "erro");
         return;
     }
 
-    btnConfirmar.textContent = "✓ Salvo";
+    mostrarToast("Lançamento salvo.", "sucesso");
 
     setTimeout(() => {
         fecharModal();
@@ -108,7 +112,21 @@ async function salvarLancamento() {
         dadosInterpretados = null;
 
         btnConfirmar.textContent = "Salvar";
-    }, 800);
+    }, 500);
+}
+
+function mostrarToast(mensagem, tipo = "sucesso") {
+    toastMensagem.textContent = mensagem;
+
+    toast.className = "toast";
+    toast.classList.add(tipo);
+    toast.classList.add("mostrar");
+
+    clearTimeout(toastTimer);
+
+    toastTimer = setTimeout(() => {
+        toast.classList.remove("mostrar");
+    }, 2200);
 }
 
 function formatarMoeda(valor) {
