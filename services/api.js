@@ -1,7 +1,7 @@
 /*
 ====================================
 Finanças da Família
-Versão: 0.6.0-alpha
+Versão: 0.7.0-beta
 Arquivo: services/api.js
 ====================================
 */
@@ -29,6 +29,13 @@ async function backendDashboard(mes, ano) {
         acao: "dashboard",
         mes,
         ano
+    });
+}
+
+async function backendAprenderCategoria(dados) {
+    return backendRequest({
+        acao: "aprenderCategoria",
+        ...dados
     });
 }
 
