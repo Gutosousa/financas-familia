@@ -47,7 +47,14 @@
             <header class="topo-app dashboard-topo">
                 <div>
                     <span class="eyebrow">Resumo do mês</span>
-                    <h1 id="dashboardMes">📊 Resumo</h1>
+                    <div class="seletor-mes" aria-label="Selecionar mês do resumo">
+                        <button id="btnMesAnterior" class="btn-mes" type="button" aria-label="Mês anterior">‹</button>
+                        <div class="mes-atual">
+                            <strong id="dashboardMesNome">Resumo</strong>
+                            <span id="dashboardAno">----</span>
+                        </div>
+                        <button id="btnMesProximo" class="btn-mes" type="button" aria-label="Próximo mês">›</button>
+                    </div>
                     <p>Receitas, despesas e onde vocês gastaram.</p>
                 </div>
                 <button id="btnAtualizarDashboard" class="usuario-chip" type="button">Atualizar</button>
