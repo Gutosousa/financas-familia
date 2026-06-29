@@ -1,451 +1,745 @@
-/*
-====================================
-Finanças da Família
-Versão: 0.5.2
-Arquivo: app.js
-====================================
-*/
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
 
-const STORAGE_USUARIO = "financas_usuario";
+:root {
+    --fundo: #F5F7FA;
+    --card: #FFFFFF;
+    --verde: #2E7D32;
+    --verde-hover: #256628;
+    --texto: #111827;
+    --cinza: #6B7280;
+    --borda: #E5E7EB;
+    --sombra: rgba(15, 23, 42, .08);
+    --vermelho-bg: #FEE2E2;
+    --vermelho: #991B1B;
+    --verde-bg: #DCFCE7;
+    --verde-texto: #166534;
+}
 
-const PLACEHOLDERS = [
-    "Ex.: giassi 40 cc",
-    "Ex.: notebook 12x 300",
-    "Ex.: internet 119 mensal",
-    "Ex.: salário 5300 pix"
-];
+html,
+body {
+    min-height: 100%;
+    background: var(--fundo);
+}
 
-const input = document.getElementById("inputMovimento");
-const botao = document.getElementById("btnContinuar");
-const btnTrocarUsuario = document.getElementById("btnTrocarUsuario");
+body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
+    color: var(--texto);
+    padding: 22px 18px 96px;
+}
 
-const telaRegistro = document.getElementById("telaRegistro");
-const telaDashboard = document.getElementById("telaDashboard");
-const navRegistro = document.getElementById("navRegistro");
-const navDashboard = document.getElementById("navDashboard");
-const btnAtualizarDashboard = document.getElementById("btnAtualizarDashboard");
+button,
+input,
+select {
+    font: inherit;
+}
 
-const modalUsuario = document.getElementById("modalUsuario");
-const modal = document.getElementById("modalConfirmacao");
-const btnEditar = document.getElementById("btnEditar");
-const btnConfirmar = document.getElementById("btnConfirmar");
+button {
+    border: none;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+}
 
-const confirmTipo = document.getElementById("confirmTipo");
-const confirmDescricao = document.getElementById("confirmDescricao");
-const confirmCategoria = document.getElementById("confirmCategoria");
-const confirmValor = document.getElementById("confirmValor");
-const confirmPagamento = document.getElementById("confirmPagamento");
-const confirmDetalhesExtras = document.getElementById("confirmDetalhesExtras");
-const iconeDescricao = document.getElementById("iconeDescricao");
-const iconeCategoria = document.getElementById("iconeCategoria");
+.app-shell {
+    width: 100%;
+    max-width: 430px;
+    margin: 0 auto;
+}
 
-const toast = document.getElementById("toast");
-const toastMensagem = document.getElementById("toastMensagem");
+.tela {
+    display: none;
+}
 
-const dashboardMes = document.getElementById("dashboardMes");
-const totalReceitas = document.getElementById("totalReceitas");
-const totalDespesas = document.getElementById("totalDespesas");
-const saldoMes = document.getElementById("saldoMes");
-const listaCategorias = document.getElementById("listaCategorias");
-const listaUltimos = document.getElementById("listaUltimos");
+.tela.ativa {
+    display: block;
+}
 
-let dadosInterpretados = null;
-let toastTimer = null;
-let usuarioAtual = localStorage.getItem(STORAGE_USUARIO) || "";
-let placeholderIndex = 0;
-let placeholderTimer = null;
+.topo-app {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 14px;
+    margin-bottom: 22px;
+}
 
-function iniciarApp() {
-    atualizarUsuarioNaTela();
-    iniciarPlaceholders();
+.eyebrow {
+    display: block;
+    color: var(--verde);
+    font-size: 13px;
+    font-weight: 700;
+    margin-bottom: 6px;
+}
 
-    if (!usuarioAtual) {
-        abrirModalUsuario();
-    } else {
-        input.focus();
+h1 {
+    font-size: 34px;
+    line-height: 1.05;
+    margin-bottom: 8px;
+}
+
+h2 {
+    font-size: 20px;
+}
+
+p,
+.texto-apoio {
+    color: var(--cinza);
+    font-size: 16px;
+    line-height: 1.4;
+}
+
+.card {
+    background: var(--card);
+    border-radius: 24px;
+    box-shadow: 0 16px 42px var(--sombra);
+}
+
+.captura-card {
+    padding: 24px;
+}
+
+input,
+select {
+    width: 100%;
+    padding: 16px;
+    border: 1px solid var(--borda);
+    border-radius: 16px;
+    background: white;
+    font-size: 18px;
+    outline: none;
+}
+
+input:focus,
+select:focus {
+    border-color: var(--verde);
+    box-shadow: 0 0 0 4px rgba(46, 125, 50, .10);
+}
+
+/* Esconde exemplos no beta mobile para manter captura limpa */
+.exemplos {
+    display: none;
+}
+
+.btn-primario,
+.btn-secundario,
+.usuario-chip,
+.btn-opcao-usuario {
+    border-radius: 16px;
+    transition: .15s;
+}
+
+.btn-primario:active,
+.btn-secundario:active,
+.usuario-chip:active,
+.btn-opcao-usuario:active,
+.recibo-linha:active,
+.bottom-nav button:active {
+    transform: scale(.98);
+}
+
+.btn-primario {
+    width: 100%;
+    margin-top: 20px;
+    padding: 16px;
+    background: var(--verde);
+    color: white;
+    font-size: 17px;
+    font-weight: 700;
+}
+
+.btn-secundario {
+    width: 100%;
+    margin-top: 20px;
+    padding: 16px;
+    background: #E5E7EB;
+    color: #111827;
+    font-size: 17px;
+    font-weight: 700;
+}
+
+.btn-primario:disabled,
+.btn-secundario:disabled {
+    opacity: .65;
+}
+
+.usuario-chip {
+    width: auto;
+    min-width: 90px;
+    padding: 10px 12px;
+    background: white;
+    color: var(--texto);
+    border: 1px solid var(--borda);
+    box-shadow: 0 8px 22px rgba(15, 23, 42, .05);
+    font-size: 13px;
+    font-weight: 700;
+}
+
+.modal.oculto,
+.oculto {
+    display: none !important;
+}
+
+.modal {
+    position: fixed;
+    inset: 0;
+    background: rgba(15, 23, 42, .45);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 18px;
+    z-index: 1000;
+    backdrop-filter: blur(8px);
+}
+
+.modal-card {
+    width: 100%;
+    max-width: 410px;
+    max-height: calc(100vh - 40px);
+    overflow: auto;
+    background: white;
+    border-radius: 28px;
+    padding: 24px;
+    box-shadow: 0 22px 60px rgba(15, 23, 42, .20);
+}
+
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 14px;
+    margin-bottom: 18px;
+}
+
+.tipo-lancamento {
+    display: inline-flex;
+    padding: 8px 12px;
+    border-radius: 999px;
+    font-weight: 800;
+    font-size: 12px;
+    text-transform: uppercase;
+}
+
+.tipo-despesa {
+    background: var(--vermelho-bg);
+    color: var(--vermelho);
+}
+
+.tipo-receita {
+    background: var(--verde-bg);
+    color: var(--verde-texto);
+}
+
+.recibo {
+    border-top: 1px solid var(--borda);
+    border-bottom: 1px solid var(--borda);
+    padding: 10px 0;
+}
+
+.recibo-linha {
+    width: 100%;
+    border: none;
+    background: transparent;
+    display: grid;
+    grid-template-columns: 34px 1fr 28px;
+    align-items: center;
+    gap: 10px;
+    min-height: 54px;
+    padding: 8px 0;
+    text-align: left;
+}
+
+.recibo-linha span:nth-child(2) {
+    font-size: 17px;
+    font-weight: 650;
+}
+
+.recibo-linha small {
+    justify-self: end;
+    opacity: .55;
+}
+
+.icone {
+    width: 34px;
+    height: 34px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 12px;
+    background: #F3F4F6;
+}
+
+.detalhes-extras {
+    margin-top: 6px;
+    padding: 12px 14px;
+    border-radius: 16px;
+    background: #F9FAFB;
+    color: var(--cinza);
+    line-height: 1.5;
+    font-size: 14px;
+}
+
+.detalhes-extras strong {
+    color: var(--texto);
+}
+
+.acoes {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+}
+
+.opcoes-usuario {
+    display: grid;
+    gap: 12px;
+    margin-top: 22px;
+}
+
+.btn-opcao-usuario {
+    width: 100%;
+    padding: 16px;
+    background: var(--verde);
+    color: white;
+    font-weight: 800;
+    font-size: 17px;
+}
+
+.dashboard-grid {
+    display: grid;
+    gap: 12px;
+    margin-bottom: 14px;
+}
+
+.indicador {
+    padding: 18px;
+}
+
+.indicador span {
+    display: block;
+    color: var(--cinza);
+    font-size: 14px;
+    margin-bottom: 8px;
+}
+
+.indicador strong {
+    font-size: 24px;
+}
+
+.indicador.receita strong,
+.indicador.saldo.positivo strong {
+    color: var(--verde-texto);
+}
+
+.indicador.despesa strong,
+.indicador.saldo.negativo strong {
+    color: var(--vermelho);
+}
+
+.bloco-dashboard {
+    padding: 20px;
+    margin-top: 14px;
+}
+
+.bloco-dashboard h2 {
+    margin-bottom: 12px;
+}
+
+.lista-dashboard {
+    display: grid;
+    gap: 10px;
+}
+
+.lista-dashboard.vazio {
+    color: var(--cinza);
+    font-size: 14px;
+}
+
+.item-dashboard {
+    display: flex;
+    justify-content: space-between;
+    gap: 16px;
+    align-items: center;
+    padding: 10px 0;
+    border-bottom: 1px solid #F3F4F6;
+}
+
+.item-dashboard:last-child {
+    border-bottom: none;
+}
+
+.principal {
+    font-weight: 700;
+}
+
+.secundario {
+    display: block;
+    margin-top: 3px;
+    color: var(--cinza);
+    font-size: 13px;
+}
+
+.valor {
+    font-weight: 800;
+    white-space: nowrap;
+}
+
+.valor.negativo {
+    color: var(--vermelho);
+}
+
+.valor.positivo {
+    color: var(--verde-texto);
+}
+
+/* Navegação inferior corrigida */
+.bottom-nav {
+    position: fixed;
+    left: 50%;
+    bottom: calc(12px + env(safe-area-inset-bottom));
+    transform: translateX(-50%);
+    width: calc(100% - 32px);
+    max-width: 430px;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    background: rgba(255,255,255,.92);
+    border: 1px solid rgba(229,231,235,.9);
+    border-radius: 24px;
+    padding: 8px;
+    box-shadow: 0 18px 46px rgba(15,23,42,.12);
+    backdrop-filter: blur(14px);
+    z-index: 800;
+}
+
+.bottom-nav button {
+    border: none;
+    border-radius: 18px;
+    padding: 10px 6px;
+    background: transparent;
+    color: var(--cinza);
+    font-weight: 800;
+}
+
+.bottom-nav button span {
+    display: block;
+    margin-top: 2px;
+    font-size: 12px;
+}
+
+.bottom-nav button.ativo {
+    background: #E8F5E9;
+    color: var(--verde);
+}
+
+.toast {
+    position: fixed;
+    left: 50%;
+    bottom: calc(88px + env(safe-area-inset-bottom));
+    transform: translateX(-50%) translateY(120px);
+    background: #1F2937;
+    color: white;
+    padding: 14px 18px;
+    border-radius: 16px;
+    font-size: 15px;
+    font-weight: 650;
+    box-shadow: 0 12px 30px rgba(0,0,0,.18);
+    opacity: 0;
+    transition: .35s;
+    z-index: 9999;
+    pointer-events: none;
+    width: calc(100% - 40px);
+    max-width: 390px;
+    text-align: center;
+}
+
+.toast.mostrar {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+}
+
+.toast.sucesso {
+    background: #15803D;
+}
+
+.toast.erro {
+    background: #B91C1C;
+}
+
+.toast.info {
+    background: #1F2937;
+}
+
+/* Ajuste específico para celular */
+@media (max-width: 519px) {
+    body {
+        padding: 22px 18px 104px;
     }
 
-    carregarDashboard();
-}
-
-function abrirModalUsuario() {
-    modalUsuario.classList.remove("oculto");
-}
-
-function fecharModalUsuario() {
-    modalUsuario.classList.add("oculto");
-    input.focus();
-}
-
-function selecionarUsuario(nome) {
-    usuarioAtual = nome;
-    localStorage.setItem(STORAGE_USUARIO, nome);
-    atualizarUsuarioNaTela();
-    fecharModalUsuario();
-    mostrarToast(`Usuário: ${nome}`, "sucesso");
-}
-
-function atualizarUsuarioNaTela() {
-    btnTrocarUsuario.textContent = usuarioAtual || "Escolher usuário";
-}
-
-async function continuar() {
-    const texto = input.value.trim();
-
-    if (!usuarioAtual) {
-        abrirModalUsuario();
-        mostrarToast("Escolha quem está usando.", "erro");
-        return;
+    .topo-app {
+        display: block;
     }
 
-    if (texto === "") {
-        mostrarToast("Digite uma movimentação.", "erro");
-        input.focus();
-        return;
+    .usuario-chip {
+        margin-top: 18px;
+        width: 100%;
     }
 
-    setBotaoCarregando(botao, "Interpretando...");
-
-    const resposta = await backendInterpretar(texto, usuarioAtual);
-
-    restaurarBotao(botao, "Continuar");
-
-    if (!resposta || !resposta.ok) {
-        mostrarToast("Não consegui interpretar essa movimentação.", "erro");
-        input.focus();
-        return;
+    h1 {
+        font-size: 34px;
     }
 
-    dadosInterpretados = resposta.dados;
-    mostrarConfirmacao(dadosInterpretados);
-}
-
-function mostrarConfirmacao(dados) {
-    const ehReceita = dados.tipo === "Receita";
-
-    confirmTipo.textContent = ehReceita ? "Receita" : "Despesa";
-    confirmTipo.className = "tipo-lancamento";
-    confirmTipo.classList.add(ehReceita ? "tipo-receita" : "tipo-despesa");
-
-    iconeDescricao.textContent = obterIconeCategoria(dados.categoria, dados.tipo);
-    iconeCategoria.textContent = "🏷";
-
-    confirmDescricao.textContent = capitalizar(dados.descricao || "Sem descrição");
-    confirmCategoria.textContent = dados.categoria || "Outros";
-    confirmValor.textContent = formatarMoeda(dados.valor || dados.valorParcela || dados.valorTotal || 0);
-    confirmPagamento.textContent = dados.pagamento || "Não informado";
-
-    preencherDetalhesExtras(dados);
-    modal.classList.remove("oculto");
-}
-
-function preencherDetalhesExtras(dados) {
-    confirmDetalhesExtras.classList.add("oculto");
-    confirmDetalhesExtras.innerHTML = "";
-
-    if (dados.parcelado) {
-        confirmDetalhesExtras.classList.remove("oculto");
-        confirmDetalhesExtras.innerHTML = `
-            <div><strong>💳 ${dados.totalParcelas}x de ${formatarMoeda(dados.valorParcela)}</strong></div>
-            <div>💰 Total: ${formatarMoeda(dados.valorTotal)}</div>
-        `;
+    .captura-card {
+        padding: 22px;
     }
 
-    if (dados.recorrente) {
-        confirmDetalhesExtras.classList.remove("oculto");
-        confirmDetalhesExtras.innerHTML += `
-            <div><strong>🔁 Conta fixa mensal</strong></div>
-            <div>Será considerada todo mês no resumo.</div>
-        `;
+    .dashboard-topo .usuario-chip {
+        margin-top: 18px;
     }
 }
 
-function fecharModal() {
-    modal.classList.add("oculto");
-    input.focus();
-}
-
-async function salvarLancamento() {
-    if (!dadosInterpretados) {
-        mostrarToast("Nenhum lançamento para salvar.", "erro");
-        return;
-    }
-
-    setBotaoCarregando(btnConfirmar, "Salvando...");
-    btnEditar.disabled = true;
-
-    const resposta = await backendSalvar({
-        pessoa: usuarioAtual,
-        ...dadosInterpretados
-    });
-
-    btnEditar.disabled = false;
-
-    if (!resposta || !resposta.ok) {
-        restaurarBotao(btnConfirmar, "Salvar");
-        mostrarToast("Não consegui salvar o lançamento.", "erro");
-        return;
-    }
-
-    mostrarToast(mensagemSucesso(dadosInterpretados), "sucesso");
-
-    setTimeout(() => {
-        fecharModal();
-        input.value = "";
-        input.focus();
-        dadosInterpretados = null;
-        restaurarBotao(btnConfirmar, "Salvar");
-        carregarDashboard(false);
-    }, 450);
-}
-
-function mensagemSucesso(dados) {
-    if (dados.parcelado) return "Parcelas registradas.";
-    if (dados.recorrente) return "Conta fixa cadastrada.";
-    return "Lançamento salvo.";
-}
-
-function editarCampo(campo) {
-    if (!dadosInterpretados) return;
-
-    const atual = dadosInterpretados[campo] || "";
-    let novoValor = null;
-
-    if (campo === "valor") {
-        const valorBase = dadosInterpretados.valor || dadosInterpretados.valorParcela || dadosInterpretados.valorTotal || 0;
-        novoValor = prompt("Novo valor:", String(valorBase).replace(".", ","));
-        if (novoValor === null) return;
-        const numero = normalizarNumero(novoValor);
-        if (!numero || numero <= 0) {
-            mostrarToast("Valor inválido.", "erro");
-            return;
-        }
-
-        if (dadosInterpretados.parcelado) {
-            dadosInterpretados.valorParcela = numero;
-            dadosInterpretados.valorTotal = numero * Number(dadosInterpretados.totalParcelas || 1);
-            dadosInterpretados.valor = numero;
-        } else {
-            dadosInterpretados.valor = numero;
-        }
-    } else if (campo === "pagamento") {
-        novoValor = prompt("Pagamento (Pix, Cartão de crédito, Cartão de débito, Dinheiro):", atual);
-        if (novoValor === null) return;
-        dadosInterpretados.pagamento = normalizarPagamento(novoValor);
-    } else if (campo === "categoria") {
-        novoValor = prompt("Categoria:", atual);
-        if (novoValor === null) return;
-        dadosInterpretados.categoria = capitalizar(novoValor.trim() || "Outros");
-    } else if (campo === "descricao") {
-        novoValor = prompt("Descrição:", atual);
-        if (novoValor === null) return;
-        dadosInterpretados.descricao = novoValor.trim() || "Sem descrição";
-    }
-
-    mostrarConfirmacao(dadosInterpretados);
-}
-
-async function carregarDashboard(mostrarMensagem = false) {
-    listaCategorias.textContent = "Carregando...";
-    listaCategorias.classList.add("vazio");
-    listaUltimos.textContent = "Carregando...";
-    listaUltimos.classList.add("vazio");
-
-    const resposta = await backendDashboard();
-
-    if (!resposta || !resposta.ok) {
-        listaCategorias.textContent = "Não consegui carregar o resumo.";
-        listaUltimos.textContent = "Não consegui carregar os últimos lançamentos.";
-        if (mostrarMensagem) mostrarToast("Erro ao carregar resumo.", "erro");
-        return;
-    }
-
-    renderizarDashboard(resposta.dados);
-    if (mostrarMensagem) mostrarToast("Resumo atualizado.", "sucesso");
-}
-
-function renderizarDashboard(dados) {
-    dashboardMes.textContent = `📊 ${dados.mes || "Resumo"}`;
-    totalReceitas.textContent = formatarMoeda(dados.receitas || 0);
-    totalDespesas.textContent = formatarMoeda(dados.despesas || 0);
-    saldoMes.textContent = formatarMoeda(dados.saldo || 0);
-
-    saldoMes.parentElement.classList.toggle("positivo", Number(dados.saldo) >= 0);
-    saldoMes.parentElement.classList.toggle("negativo", Number(dados.saldo) < 0);
-
-    renderizarCategorias(dados.categorias || []);
-    renderizarUltimos(dados.ultimos || []);
-}
-
-function renderizarCategorias(categorias) {
-    listaCategorias.innerHTML = "";
-
-    if (!categorias.length) {
-        listaCategorias.textContent = "Nenhuma despesa registrada neste mês.";
-        listaCategorias.classList.add("vazio");
-        return;
-    }
-
-    listaCategorias.classList.remove("vazio");
-
-    categorias.forEach(item => {
-        const div = document.createElement("div");
-        div.className = "item-dashboard";
-        div.innerHTML = `
-            <div>
-                <span class="principal">${obterIconeCategoria(item.categoria)} ${item.categoria}</span>
-                <span class="secundario">${item.quantidade} lançamento(s)</span>
-            </div>
-            <span class="valor negativo">${formatarMoeda(item.total)}</span>
-        `;
-        listaCategorias.appendChild(div);
-    });
-}
-
-function renderizarUltimos(ultimos) {
-    listaUltimos.innerHTML = "";
-
-    if (!ultimos.length) {
-        listaUltimos.textContent = "Nenhum lançamento recente.";
-        listaUltimos.classList.add("vazio");
-        return;
-    }
-
-    listaUltimos.classList.remove("vazio");
-
-    ultimos.forEach(item => {
-        const ehReceita = item.tipo === "Receita";
-        const div = document.createElement("div");
-        div.className = "item-dashboard";
-        div.innerHTML = `
-            <div>
-                <span class="principal">${obterIconeCategoria(item.categoria, item.tipo)} ${capitalizar(item.descricao)}</span>
-                <span class="secundario">${item.pessoa || ""} • ${item.categoria || "Outros"}</span>
-            </div>
-            <span class="valor ${ehReceita ? "positivo" : "negativo"}">${ehReceita ? "+" : "-"}${formatarMoeda(item.valor)}</span>
-        `;
-        listaUltimos.appendChild(div);
-    });
-}
-
-function trocarTela(tela) {
-    const dashboardAtivo = tela === "dashboard";
-
-    telaRegistro.classList.toggle("ativa", !dashboardAtivo);
-    telaDashboard.classList.toggle("ativa", dashboardAtivo);
-    navRegistro.classList.toggle("ativo", !dashboardAtivo);
-    navDashboard.classList.toggle("ativo", dashboardAtivo);
-
-    if (dashboardAtivo) {
-        carregarDashboard();
-    } else {
-        setTimeout(() => input.focus(), 80);
+/* Desktop/tablet */
+@media (min-width: 520px) {
+    body {
+        display: flex;
+        align-items: center;
+        justify-content: center;
     }
 }
 
-function mostrarToast(mensagem, tipo = "sucesso") {
-    toastMensagem.textContent = mensagem;
-    toast.className = "toast";
-    toast.classList.add(tipo, "mostrar");
+/* ==========================
+   Beta 0.5.2 — Refinamento visual
+========================== */
 
-    clearTimeout(toastTimer);
-    toastTimer = setTimeout(() => {
-        toast.classList.remove("mostrar");
-    }, 2200);
+.app-shell {
+    transition: opacity .18s ease, transform .18s ease;
 }
 
-function setBotaoCarregando(botaoAlvo, texto) {
-    botaoAlvo.dataset.textoOriginal = botaoAlvo.textContent;
-    botaoAlvo.textContent = texto;
-    botaoAlvo.disabled = true;
+.topo-app {
+    align-items: center;
 }
 
-function restaurarBotao(botaoAlvo, textoPadrao) {
-    botaoAlvo.textContent = textoPadrao || botaoAlvo.dataset.textoOriginal || "Salvar";
-    botaoAlvo.disabled = false;
+.usuario-chip {
+    min-width: unset;
+    width: auto;
+    margin-top: 0;
+    padding: 8px 11px;
+    border-radius: 999px;
+    font-size: 12px;
+    line-height: 1;
+    white-space: nowrap;
 }
 
-function normalizarNumero(valor) {
-    const limpo = String(valor).replace(/[^\d,\.]/g, "").replace(",", ".");
-    return Number(limpo);
+.usuario-chip::before {
+    content: "👤 ";
 }
 
-function normalizarPagamento(valor) {
-    const raw = removerAcentos(String(valor).toLowerCase());
-    if (raw.includes("pix")) return "Pix";
-    if (raw.includes("debito") || raw === "cd") return "Cartão de débito";
-    if (raw.includes("credito") || raw === "cc") return "Cartão de crédito";
-    if (raw.includes("dinheiro") || raw === "din") return "Dinheiro";
-    return capitalizar(valor.trim() || "Não informado");
+.dashboard-topo .usuario-chip::before {
+    content: "↻ ";
 }
 
-function formatarMoeda(valor) {
-    return Number(valor || 0).toLocaleString("pt-BR", {
-        style: "currency",
-        currency: "BRL"
-    });
+.captura-card {
+    position: relative;
+    overflow: hidden;
 }
 
-function capitalizar(texto) {
-    const valor = String(texto || "").trim();
-    if (!valor) return "";
-    return valor.charAt(0).toUpperCase() + valor.slice(1);
+.captura-card::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(circle at top right, rgba(46, 125, 50, .08), transparent 36%);
+    pointer-events: none;
 }
 
-function removerAcentos(texto) {
-    return String(texto || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+.captura-card > * {
+    position: relative;
+    z-index: 1;
 }
 
-function obterIconeCategoria(categoria = "", tipo = "") {
-    if (tipo === "Receita") return "💵";
-
-    const raw = removerAcentos(categoria.toLowerCase());
-
-    if (raw.includes("mercado")) return "🛒";
-    if (raw.includes("alimentacao") || raw.includes("restaurante")) return "🍔";
-    if (raw.includes("combustivel")) return "⛽";
-    if (raw.includes("saude")) return "💊";
-    if (raw.includes("casa")) return "🏠";
-    if (raw.includes("lazer")) return "🎮";
-    if (raw.includes("eletronico")) return "💻";
-    if (raw.includes("recebimento")) return "💵";
-
-    return "🏷";
+.btn-primario,
+.btn-secundario,
+.btn-opcao-usuario,
+.usuario-chip,
+.bottom-nav button {
+    transition: transform .14s ease, background .18s ease, color .18s ease, box-shadow .18s ease, opacity .18s ease;
 }
 
-function iniciarPlaceholders() {
-    if (!input) return;
-
-    input.placeholder = PLACEHOLDERS[0];
-
-    clearInterval(placeholderTimer);
-    placeholderTimer = setInterval(() => {
-        if (document.activeElement === input && input.value.trim()) return;
-
-        placeholderIndex = (placeholderIndex + 1) % PLACEHOLDERS.length;
-        input.placeholder = PLACEHOLDERS[placeholderIndex];
-    }, 2800);
+.btn-primario {
+    box-shadow: 0 12px 26px rgba(46, 125, 50, .18);
 }
 
-botao.addEventListener("click", continuar);
-input.addEventListener("keydown", event => {
-    if (event.key === "Enter") continuar();
-});
+.btn-primario:hover {
+    background: var(--verde-hover);
+}
 
-btnEditar.addEventListener("click", fecharModal);
-btnConfirmar.addEventListener("click", salvarLancamento);
-btnTrocarUsuario.addEventListener("click", abrirModalUsuario);
-btnAtualizarDashboard.addEventListener("click", () => carregarDashboard(true));
+.dashboard-grid {
+    grid-template-columns: 1fr;
+}
 
-navRegistro.addEventListener("click", () => trocarTela("registro"));
-navDashboard.addEventListener("click", () => trocarTela("dashboard"));
+.indicador {
+    position: relative;
+    overflow: hidden;
+    padding: 20px;
+}
 
-modalUsuario.querySelectorAll(".btn-opcao-usuario").forEach(botaoUsuario => {
-    botaoUsuario.addEventListener("click", () => selecionarUsuario(botaoUsuario.dataset.usuario));
-});
+.indicador::after {
+    position: absolute;
+    right: 18px;
+    top: 18px;
+    font-size: 24px;
+    opacity: .18;
+}
 
-modal.querySelectorAll(".recibo-linha").forEach(linha => {
-    linha.addEventListener("click", () => editarCampo(linha.dataset.edit));
-});
+.indicador.receita::after {
+    content: "💵";
+}
 
-iniciarApp();
+.indicador.despesa::after {
+    content: "🔴";
+}
+
+.indicador.saldo::after {
+    content: "🟢";
+}
+
+.indicador span {
+    font-size: 13px;
+    font-weight: 750;
+    text-transform: uppercase;
+    letter-spacing: .03em;
+}
+
+.indicador strong {
+    display: block;
+    font-size: 28px;
+    line-height: 1.1;
+}
+
+.bloco-dashboard {
+    box-shadow: 0 12px 34px rgba(15,23,42,.06);
+}
+
+.bloco-dashboard h2 {
+    font-size: 18px;
+}
+
+.item-dashboard {
+    padding: 12px 0;
+}
+
+.bottom-nav button {
+    position: relative;
+}
+
+.bottom-nav button.ativo {
+    box-shadow: inset 0 0 0 1px rgba(46,125,50,.08);
+}
+
+.bottom-nav button.ativo span {
+    color: var(--verde);
+}
+
+.modal-card {
+    animation: modalEntrar .22s ease;
+}
+
+@keyframes modalEntrar {
+    from {
+        opacity: 0;
+        transform: translateY(18px) scale(.98);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+.recibo-linha {
+    border-radius: 16px;
+}
+
+.recibo-linha:hover {
+    background: #F9FAFB;
+}
+
+@media (max-width: 519px) {
+    body {
+        padding-top: max(20px, env(safe-area-inset-top));
+    }
+
+    .topo-app {
+        display: flex;
+        align-items: flex-start;
+    }
+
+    .topo-app > div {
+        min-width: 0;
+    }
+
+    .usuario-chip {
+        margin-top: 3px;
+        width: auto;
+        max-width: 132px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .dashboard-topo .usuario-chip {
+        margin-top: 3px;
+    }
+
+    h1 {
+        font-size: 31px;
+    }
+
+    p,
+    .texto-apoio {
+        font-size: 15px;
+    }
+
+    .card {
+        border-radius: 26px;
+    }
+
+    .captura-card {
+        padding: 22px;
+    }
+
+    input,
+    select {
+        font-size: 17px;
+        padding: 15px;
+    }
+
+    .btn-primario,
+    .btn-secundario {
+        padding: 15px;
+    }
+
+    .dashboard-grid {
+        gap: 10px;
+    }
+
+    .indicador {
+        padding: 18px;
+    }
+
+    .indicador strong {
+        font-size: 26px;
+    }
+
+    .modal-card {
+        border-radius: 26px;
+        padding: 22px;
+    }
+}
+
+@media (min-width: 520px) {
+    .dashboard-grid {
+        grid-template-columns: repeat(3, 1fr);
+    }
+
+    .indicador strong {
+        font-size: 22px;
+    }
+}
