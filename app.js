@@ -1,12 +1,19 @@
 /*
 ====================================
 Finanças da Família
-Versão: 0.5.0
+Versão: 0.6.0-alpha
 Arquivo: app.js
 ====================================
 */
 
 const STORAGE_USUARIO = "financas_usuario";
+
+const PLACEHOLDERS = [
+    "Ex.: giassi 40 cc",
+    "Ex.: notebook 12x 300",
+    "Ex.: internet 119 mensal",
+    "Ex.: salário 5300 pix"
+];
 
 const input = document.getElementById("inputMovimento");
 const botao = document.getElementById("btnContinuar");
@@ -35,7 +42,10 @@ const iconeCategoria = document.getElementById("iconeCategoria");
 const toast = document.getElementById("toast");
 const toastMensagem = document.getElementById("toastMensagem");
 
-const dashboardMes = document.getElementById("dashboardMes");
+const dashboardMesNome = document.getElementById("dashboardMesNome");
+const dashboardAno = document.getElementById("dashboardAno");
+const btnMesAnterior = document.getElementById("btnMesAnterior");
+const btnMesProximo = document.getElementById("btnMesProximo");
 const totalReceitas = document.getElementById("totalReceitas");
 const totalDespesas = document.getElementById("totalDespesas");
 const saldoMes = document.getElementById("saldoMes");
@@ -45,9 +55,16 @@ const listaUltimos = document.getElementById("listaUltimos");
 let dadosInterpretados = null;
 let toastTimer = null;
 let usuarioAtual = localStorage.getItem(STORAGE_USUARIO) || "";
+let placeholderIndex = 0;
+let placeholderTimer = null;
+
+const dataHoje = new Date();
+let mesSelecionado = dataHoje.getMonth();
+let anoSelecionado = dataHoje.getFullYear();
 
 function iniciarApp() {
     atualizarUsuarioNaTela();
+    iniciarPlaceholders();
 
     if (!usuarioAtual) {
         abrirModalUsuario();
@@ -236,12 +253,14 @@ function editarCampo(campo) {
 }
 
 async function carregarDashboard(mostrarMensagem = false) {
+    atualizarSeletorMes();
+
     listaCategorias.textContent = "Carregando...";
     listaCategorias.classList.add("vazio");
     listaUltimos.textContent = "Carregando...";
     listaUltimos.classList.add("vazio");
 
-    const resposta = await backendDashboard();
+    const resposta = await backendDashboard(mesSelecionado, anoSelecionado);
 
     if (!resposta || !resposta.ok) {
         listaCategorias.textContent = "Não consegui carregar o resumo.";
@@ -251,11 +270,23 @@ async function carregarDashboard(mostrarMensagem = false) {
     }
 
     renderizarDashboard(resposta.dados);
+    atualizarSeletorMes();
+
     if (mostrarMensagem) mostrarToast("Resumo atualizado.", "sucesso");
 }
 
 function renderizarDashboard(dados) {
-    dashboardMes.textContent = `📊 ${dados.mes || "Resumo"}`;
+    if (typeof dados.mesNumero === "number") {
+        mesSelecionado = dados.mesNumero;
+    }
+
+    if (typeof dados.ano === "number") {
+        anoSelecionado = dados.ano;
+    }
+
+    dashboardMesNome.textContent = dados.mes || obterNomeMes(mesSelecionado);
+    dashboardAno.textContent = String(anoSelecionado);
+
     totalReceitas.textContent = formatarMoeda(dados.receitas || 0);
     totalDespesas.textContent = formatarMoeda(dados.despesas || 0);
     saldoMes.textContent = formatarMoeda(dados.saldo || 0);
@@ -316,6 +347,70 @@ function renderizarUltimos(ultimos) {
         `;
         listaUltimos.appendChild(div);
     });
+}
+
+function mesAnterior() {
+    mesSelecionado--;
+
+    if (mesSelecionado < 0) {
+        mesSelecionado = 11;
+        anoSelecionado--;
+    }
+
+    carregarDashboard();
+}
+
+function mesProximo() {
+    if (estaNoMesAtualOuFuturo()) {
+        return;
+    }
+
+    mesSelecionado++;
+
+    if (mesSelecionado > 11) {
+        mesSelecionado = 0;
+        anoSelecionado++;
+    }
+
+    carregarDashboard();
+}
+
+function atualizarSeletorMes() {
+    if (dashboardMesNome) {
+        dashboardMesNome.textContent = obterNomeMes(mesSelecionado);
+    }
+
+    if (dashboardAno) {
+        dashboardAno.textContent = String(anoSelecionado);
+    }
+
+    if (btnMesProximo) {
+        btnMesProximo.disabled = estaNoMesAtualOuFuturo();
+    }
+}
+
+function estaNoMesAtualOuFuturo() {
+    return anoSelecionado > dataHoje.getFullYear() ||
+        (anoSelecionado === dataHoje.getFullYear() && mesSelecionado >= dataHoje.getMonth());
+}
+
+function obterNomeMes(mes) {
+    const meses = [
+        "Janeiro",
+        "Fevereiro",
+        "Março",
+        "Abril",
+        "Maio",
+        "Junho",
+        "Julho",
+        "Agosto",
+        "Setembro",
+        "Outubro",
+        "Novembro",
+        "Dezembro"
+    ];
+
+    return meses[mes] || "Resumo";
 }
 
 function trocarTela(tela) {
@@ -403,6 +498,20 @@ function obterIconeCategoria(categoria = "", tipo = "") {
     return "🏷";
 }
 
+function iniciarPlaceholders() {
+    if (!input) return;
+
+    input.placeholder = PLACEHOLDERS[0];
+
+    clearInterval(placeholderTimer);
+    placeholderTimer = setInterval(() => {
+        if (document.activeElement === input && input.value.trim()) return;
+
+        placeholderIndex = (placeholderIndex + 1) % PLACEHOLDERS.length;
+        input.placeholder = PLACEHOLDERS[placeholderIndex];
+    }, 2800);
+}
+
 botao.addEventListener("click", continuar);
 input.addEventListener("keydown", event => {
     if (event.key === "Enter") continuar();
@@ -412,6 +521,8 @@ btnEditar.addEventListener("click", fecharModal);
 btnConfirmar.addEventListener("click", salvarLancamento);
 btnTrocarUsuario.addEventListener("click", abrirModalUsuario);
 btnAtualizarDashboard.addEventListener("click", () => carregarDashboard(true));
+btnMesAnterior.addEventListener("click", mesAnterior);
+btnMesProximo.addEventListener("click", mesProximo);
 
 navRegistro.addEventListener("click", () => trocarTela("registro"));
 navDashboard.addEventListener("click", () => trocarTela("dashboard"));
