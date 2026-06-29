@@ -1,16 +1,38 @@
 /*
 ====================================
 Finanças da Família
-Versão: 0.5.0
+Versão: 0.6.0-alpha
 Arquivo: services/api.js
-Comunicação com o Apps Script.
 ====================================
 */
 
 const API_URL =
     "https://script.google.com/macros/s/AKfycbxlWaAVRtC4pHzqV7hK3rfHNYwT9js9u0xSSDWaa6WQgkDD-DMm4sU-nq8GG-UW9B9GHQ/exec";
 
-async function chamarBackend(payload) {
+async function backendInterpretar(texto, pessoa = "") {
+    return backendRequest({
+        acao: "interpretar",
+        pessoa,
+        text: texto
+    });
+}
+
+async function backendSalvar(dados) {
+    return backendRequest({
+        acao: "salvar",
+        ...dados
+    });
+}
+
+async function backendDashboard(mes, ano) {
+    return backendRequest({
+        acao: "dashboard",
+        mes,
+        ano
+    });
+}
+
+async function backendRequest(payload) {
     try {
         const resposta = await fetch(API_URL, {
             method: "POST",
@@ -26,28 +48,7 @@ async function chamarBackend(payload) {
 
         return await resposta.json();
     } catch (erro) {
-        console.error("Erro ao conectar com o backend:", erro);
+        console.error("Erro ao conectar com a API:", erro);
         return null;
     }
-}
-
-async function backendInterpretar(texto, pessoa) {
-    return chamarBackend({
-        acao: "interpretar",
-        pessoa,
-        text: texto
-    });
-}
-
-async function backendSalvar(dados) {
-    return chamarBackend({
-        acao: "salvar",
-        ...dados
-    });
-}
-
-async function backendDashboard() {
-    return chamarBackend({
-        acao: "dashboard"
-    });
 }
