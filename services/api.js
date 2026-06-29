@@ -1,50 +1,23 @@
 /*
 ====================================
-
 Finanças da Família
-
-Versão: 0.2.2
-
+Versão: 0.5.0
 Arquivo: services/api.js
-
-Responsável pela comunicação
-com o Apps Script.
-
+Comunicação com o Apps Script.
 ====================================
 */
 
 const API_URL =
     "https://script.google.com/macros/s/AKfycbxlWaAVRtC4pHzqV7hK3rfHNYwT9js9u0xSSDWaa6WQgkDD-DMm4sU-nq8GG-UW9B9GHQ/exec";
 
-
-/*
-====================================
-Interpretar movimentação
-====================================
-*/
-
-async function backendInterpretar(texto) {
-
+async function chamarBackend(payload) {
     try {
-
         const resposta = await fetch(API_URL, {
-
             method: "POST",
-
-           headers: {
-    "Content-Type": "text/plain;charset=utf-8"
-},
-
-            body: JSON.stringify({
-
-                acao: "interpretar",
-
-                pessoa: "Augusto",
-
-                text: texto
-
-            })
-
+            headers: {
+                "Content-Type": "text/plain;charset=utf-8"
+            },
+            body: JSON.stringify(payload)
         });
 
         if (!resposta.ok) {
@@ -52,58 +25,29 @@ async function backendInterpretar(texto) {
         }
 
         return await resposta.json();
-
     } catch (erro) {
-
-        console.error("Erro ao interpretar:", erro);
-
+        console.error("Erro ao conectar com o backend:", erro);
         return null;
-
     }
-
 }
 
-
-/*
-====================================
-Salvar movimentação
-====================================
-*/
+async function backendInterpretar(texto, pessoa) {
+    return chamarBackend({
+        acao: "interpretar",
+        pessoa,
+        text: texto
+    });
+}
 
 async function backendSalvar(dados) {
+    return chamarBackend({
+        acao: "salvar",
+        ...dados
+    });
+}
 
-    try {
-
-        const resposta = await fetch(API_URL, {
-
-            method: "POST",
-
-           headers: {
-    "Content-Type": "text/plain;charset=utf-8"
-},
-
-            body: JSON.stringify({
-
-                acao: "salvar",
-
-                ...dados
-
-            })
-
-        });
-
-        if (!resposta.ok) {
-            throw new Error("Erro HTTP " + resposta.status);
-        }
-
-        return await resposta.json();
-
-    } catch (erro) {
-
-        console.error("Erro ao salvar:", erro);
-
-        return null;
-
-    }
-
+async function backendDashboard() {
+    return chamarBackend({
+        acao: "dashboard"
+    });
 }

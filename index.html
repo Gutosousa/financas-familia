@@ -2,68 +2,149 @@
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="theme-color" content="#2E7D32">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-title" content="Finanças">
     <title>Finanças da Família</title>
+    <link rel="manifest" href="manifest.json">
+    <link rel="apple-touch-icon" href="assets/icons/icon-192.png">
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
+    <main class="app-shell">
+        <section id="telaRegistro" class="tela ativa">
+            <header class="topo-app">
+                <div>
+                    <span class="eyebrow">Beta Familiar 0.5</span>
+                    <h1>💰 Finanças</h1>
+                    <p>O que aconteceu hoje?</p>
+                </div>
+                <button id="btnTrocarUsuario" class="usuario-chip" type="button">Usuário</button>
+            </header>
 
-    <main class="container">
-        <header>
-            <h1>💰 Finanças da Família</h1>
-            <p>Registre uma movimentação em segundos</p>
-        </header>
+            <section class="card captura-card">
+                <input
+                    id="inputMovimento"
+                    type="text"
+                    placeholder="Ex.: giassi 40 cc"
+                    autocomplete="off"
+                    inputmode="text"
+                    autofocus>
 
-        <section class="card">
-            <input
-                id="inputMovimento"
-                type="text"
-                placeholder="Ex.: giassi 40 cc"
-                autocomplete="off"
-                autofocus>
+                <div class="exemplos">
+                    <span>giassi 40 cc</span>
+                    <span>salário 5300 pix</span>
+                    <span>notebook 3600 12x cc</span>
+                    <span>internet 119 mensal</span>
+                </div>
 
-            <button id="btnContinuar">Continuar</button>
+                <button id="btnContinuar" class="btn-primario" type="button">Continuar</button>
+            </section>
+        </section>
+
+        <section id="telaDashboard" class="tela">
+            <header class="topo-app dashboard-topo">
+                <div>
+                    <span class="eyebrow">Resumo do mês</span>
+                    <h1 id="dashboardMes">📊 Resumo</h1>
+                    <p>Receitas, despesas e onde vocês gastaram.</p>
+                </div>
+                <button id="btnAtualizarDashboard" class="usuario-chip" type="button">Atualizar</button>
+            </header>
+
+            <section class="dashboard-grid">
+                <article class="card indicador receita">
+                    <span>Receitas</span>
+                    <strong id="totalReceitas">R$ 0,00</strong>
+                </article>
+
+                <article class="card indicador despesa">
+                    <span>Despesas</span>
+                    <strong id="totalDespesas">R$ 0,00</strong>
+                </article>
+
+                <article class="card indicador saldo">
+                    <span>Saldo</span>
+                    <strong id="saldoMes">R$ 0,00</strong>
+                </article>
+            </section>
+
+            <section class="card bloco-dashboard">
+                <h2>Onde gastamos</h2>
+                <div id="listaCategorias" class="lista-dashboard vazio">Carregando...</div>
+            </section>
+
+            <section class="card bloco-dashboard">
+                <h2>Últimos lançamentos</h2>
+                <div id="listaUltimos" class="lista-dashboard vazio">Carregando...</div>
+            </section>
         </section>
     </main>
 
-    <div id="modalConfirmacao" class="modal oculto">
-        <div class="modal-card">
-            <h2>Confirmar lançamento</h2>
+    <nav class="bottom-nav" aria-label="Navegação principal">
+        <button id="navRegistro" class="ativo" type="button">🏠<span>Registrar</span></button>
+        <button id="navDashboard" type="button">📊<span>Resumo</span></button>
+    </nav>
 
-            <div class="tipo-lancamento" id="confirmTipo"></div>
-
-            <div class="linha">
-                <strong>Descrição</strong>
-                <span id="confirmDescricao"></span>
-            </div>
-
-            <div class="linha">
-                <strong>Categoria</strong>
-                <span id="confirmCategoria"></span>
-            </div>
-
-            <div class="linha">
-                <strong>Valor</strong>
-                <span id="confirmValor"></span>
-            </div>
-
-            <div class="linha">
-                <strong>Pagamento</strong>
-                <span id="confirmPagamento"></span>
-            </div>
-
-            <div class="acoes">
-                <button id="btnEditar">Voltar</button>
-                <button id="btnConfirmar">Salvar</button>
+    <div id="modalUsuario" class="modal oculto">
+        <div class="modal-card compacto">
+            <h2>Quem está usando?</h2>
+            <p class="texto-apoio">Escolha uma vez. O app salva no celular.</p>
+            <div class="opcoes-usuario">
+                <button class="btn-opcao-usuario" data-usuario="Augusto" type="button">Augusto</button>
+                <button class="btn-opcao-usuario" data-usuario="Izabela" type="button">Izabela</button>
             </div>
         </div>
     </div>
-<!-- Toast -->
 
-<div id="toast" class="toast">
-    <span id="toastMensagem"></span>
-</div>
-<script src="./services/api.js"></script>
-<script src="./app.js"></script>
+    <div id="modalConfirmacao" class="modal oculto">
+        <div class="modal-card">
+            <div class="modal-header">
+                <h2>Confirmar lançamento</h2>
+                <div class="tipo-lancamento" id="confirmTipo"></div>
+            </div>
+
+            <div class="recibo">
+                <button class="recibo-linha" data-edit="descricao" type="button">
+                    <span class="icone" id="iconeDescricao">📝</span>
+                    <span id="confirmDescricao">Descrição</span>
+                    <small>✏️</small>
+                </button>
+
+                <button class="recibo-linha" data-edit="categoria" type="button">
+                    <span class="icone" id="iconeCategoria">🏷</span>
+                    <span id="confirmCategoria">Categoria</span>
+                    <small>✏️</small>
+                </button>
+
+                <button class="recibo-linha" data-edit="valor" type="button">
+                    <span class="icone">💰</span>
+                    <span id="confirmValor">R$ 0,00</span>
+                    <small>✏️</small>
+                </button>
+
+                <button class="recibo-linha" data-edit="pagamento" type="button">
+                    <span class="icone">💳</span>
+                    <span id="confirmPagamento">Pagamento</span>
+                    <small>✏️</small>
+                </button>
+
+                <div id="confirmDetalhesExtras" class="detalhes-extras oculto"></div>
+            </div>
+
+            <div class="acoes">
+                <button id="btnEditar" class="btn-secundario" type="button">Voltar</button>
+                <button id="btnConfirmar" class="btn-primario" type="button">Salvar</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="toast" class="toast">
+        <span id="toastMensagem"></span>
+    </div>
+
+    <script src="./services/api.js"></script>
+    <script src="./app.js"></script>
 </body>
 </html>

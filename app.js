@@ -1,14 +1,24 @@
 /*
 ====================================
 Finanças da Família
-Versão: 0.3.1
+Versão: 0.5.0
 Arquivo: app.js
 ====================================
 */
 
+const STORAGE_USUARIO = "financas_usuario";
+
 const input = document.getElementById("inputMovimento");
 const botao = document.getElementById("btnContinuar");
+const btnTrocarUsuario = document.getElementById("btnTrocarUsuario");
 
+const telaRegistro = document.getElementById("telaRegistro");
+const telaDashboard = document.getElementById("telaDashboard");
+const navRegistro = document.getElementById("navRegistro");
+const navDashboard = document.getElementById("navDashboard");
+const btnAtualizarDashboard = document.getElementById("btnAtualizarDashboard");
+
+const modalUsuario = document.getElementById("modalUsuario");
 const modal = document.getElementById("modalConfirmacao");
 const btnEditar = document.getElementById("btnEditar");
 const btnConfirmar = document.getElementById("btnConfirmar");
@@ -18,15 +28,65 @@ const confirmDescricao = document.getElementById("confirmDescricao");
 const confirmCategoria = document.getElementById("confirmCategoria");
 const confirmValor = document.getElementById("confirmValor");
 const confirmPagamento = document.getElementById("confirmPagamento");
+const confirmDetalhesExtras = document.getElementById("confirmDetalhesExtras");
+const iconeDescricao = document.getElementById("iconeDescricao");
+const iconeCategoria = document.getElementById("iconeCategoria");
 
 const toast = document.getElementById("toast");
 const toastMensagem = document.getElementById("toastMensagem");
 
+const dashboardMes = document.getElementById("dashboardMes");
+const totalReceitas = document.getElementById("totalReceitas");
+const totalDespesas = document.getElementById("totalDespesas");
+const saldoMes = document.getElementById("saldoMes");
+const listaCategorias = document.getElementById("listaCategorias");
+const listaUltimos = document.getElementById("listaUltimos");
+
 let dadosInterpretados = null;
 let toastTimer = null;
+let usuarioAtual = localStorage.getItem(STORAGE_USUARIO) || "";
+
+function iniciarApp() {
+    atualizarUsuarioNaTela();
+
+    if (!usuarioAtual) {
+        abrirModalUsuario();
+    } else {
+        input.focus();
+    }
+
+    carregarDashboard();
+}
+
+function abrirModalUsuario() {
+    modalUsuario.classList.remove("oculto");
+}
+
+function fecharModalUsuario() {
+    modalUsuario.classList.add("oculto");
+    input.focus();
+}
+
+function selecionarUsuario(nome) {
+    usuarioAtual = nome;
+    localStorage.setItem(STORAGE_USUARIO, nome);
+    atualizarUsuarioNaTela();
+    fecharModalUsuario();
+    mostrarToast(`Usuário: ${nome}`, "sucesso");
+}
+
+function atualizarUsuarioNaTela() {
+    btnTrocarUsuario.textContent = usuarioAtual || "Escolher usuário";
+}
 
 async function continuar() {
     const texto = input.value.trim();
+
+    if (!usuarioAtual) {
+        abrirModalUsuario();
+        mostrarToast("Escolha quem está usando.", "erro");
+        return;
+    }
 
     if (texto === "") {
         mostrarToast("Digite uma movimentação.", "erro");
@@ -34,13 +94,11 @@ async function continuar() {
         return;
     }
 
-    botao.textContent = "Interpretando...";
-    botao.disabled = true;
+    setBotaoCarregando(botao, "Interpretando...");
 
-    const resposta = await backendInterpretar(texto);
+    const resposta = await backendInterpretar(texto, usuarioAtual);
 
-    botao.textContent = "Continuar";
-    botao.disabled = false;
+    restaurarBotao(botao, "Continuar");
 
     if (!resposta || !resposta.ok) {
         mostrarToast("Não consegui interpretar essa movimentação.", "erro");
@@ -49,27 +107,47 @@ async function continuar() {
     }
 
     dadosInterpretados = resposta.dados;
-
     mostrarConfirmacao(dadosInterpretados);
 }
 
 function mostrarConfirmacao(dados) {
-    confirmTipo.textContent = dados.tipo === "Receita" ? "🟢 Receita" : "🔴 Despesa";
+    const ehReceita = dados.tipo === "Receita";
 
+    confirmTipo.textContent = ehReceita ? "Receita" : "Despesa";
     confirmTipo.className = "tipo-lancamento";
+    confirmTipo.classList.add(ehReceita ? "tipo-receita" : "tipo-despesa");
 
-    if (dados.tipo === "Receita") {
-        confirmTipo.classList.add("tipo-receita");
-    } else {
-        confirmTipo.classList.add("tipo-despesa");
+    iconeDescricao.textContent = obterIconeCategoria(dados.categoria, dados.tipo);
+    iconeCategoria.textContent = "🏷";
+
+    confirmDescricao.textContent = capitalizar(dados.descricao || "Sem descrição");
+    confirmCategoria.textContent = dados.categoria || "Outros";
+    confirmValor.textContent = formatarMoeda(dados.valor || dados.valorParcela || dados.valorTotal || 0);
+    confirmPagamento.textContent = dados.pagamento || "Não informado";
+
+    preencherDetalhesExtras(dados);
+    modal.classList.remove("oculto");
+}
+
+function preencherDetalhesExtras(dados) {
+    confirmDetalhesExtras.classList.add("oculto");
+    confirmDetalhesExtras.innerHTML = "";
+
+    if (dados.parcelado) {
+        confirmDetalhesExtras.classList.remove("oculto");
+        confirmDetalhesExtras.innerHTML = `
+            <div><strong>💳 ${dados.totalParcelas}x de ${formatarMoeda(dados.valorParcela)}</strong></div>
+            <div>💰 Total: ${formatarMoeda(dados.valorTotal)}</div>
+        `;
     }
 
-    confirmDescricao.textContent = dados.descricao || "Sem descrição";
-    confirmCategoria.textContent = dados.categoria;
-    confirmValor.textContent = formatarMoeda(dados.valor);
-    confirmPagamento.textContent = dados.pagamento;
-
-    modal.classList.remove("oculto");
+    if (dados.recorrente) {
+        confirmDetalhesExtras.classList.remove("oculto");
+        confirmDetalhesExtras.innerHTML += `
+            <div><strong>🔁 Conta fixa mensal</strong></div>
+            <div>Será considerada todo mês no resumo.</div>
+        `;
+    }
 }
 
 function fecharModal() {
@@ -83,67 +161,267 @@ async function salvarLancamento() {
         return;
     }
 
-    btnConfirmar.textContent = "Salvando...";
-    btnConfirmar.disabled = true;
+    setBotaoCarregando(btnConfirmar, "Salvando...");
     btnEditar.disabled = true;
 
     const resposta = await backendSalvar({
-        pessoa: "Augusto",
+        pessoa: usuarioAtual,
         ...dadosInterpretados
     });
 
-    btnConfirmar.disabled = false;
     btnEditar.disabled = false;
 
     if (!resposta || !resposta.ok) {
-        btnConfirmar.textContent = "Salvar";
+        restaurarBotao(btnConfirmar, "Salvar");
         mostrarToast("Não consegui salvar o lançamento.", "erro");
         return;
     }
 
-    mostrarToast("Lançamento salvo.", "sucesso");
+    mostrarToast(mensagemSucesso(dadosInterpretados), "sucesso");
 
     setTimeout(() => {
         fecharModal();
-
         input.value = "";
         input.focus();
-
         dadosInterpretados = null;
+        restaurarBotao(btnConfirmar, "Salvar");
+        carregarDashboard(false);
+    }, 450);
+}
 
-        btnConfirmar.textContent = "Salvar";
-    }, 500);
+function mensagemSucesso(dados) {
+    if (dados.parcelado) return "Parcelas registradas.";
+    if (dados.recorrente) return "Conta fixa cadastrada.";
+    return "Lançamento salvo.";
+}
+
+function editarCampo(campo) {
+    if (!dadosInterpretados) return;
+
+    const atual = dadosInterpretados[campo] || "";
+    let novoValor = null;
+
+    if (campo === "valor") {
+        const valorBase = dadosInterpretados.valor || dadosInterpretados.valorParcela || dadosInterpretados.valorTotal || 0;
+        novoValor = prompt("Novo valor:", String(valorBase).replace(".", ","));
+        if (novoValor === null) return;
+        const numero = normalizarNumero(novoValor);
+        if (!numero || numero <= 0) {
+            mostrarToast("Valor inválido.", "erro");
+            return;
+        }
+
+        if (dadosInterpretados.parcelado) {
+            dadosInterpretados.valorParcela = numero;
+            dadosInterpretados.valorTotal = numero * Number(dadosInterpretados.totalParcelas || 1);
+            dadosInterpretados.valor = numero;
+        } else {
+            dadosInterpretados.valor = numero;
+        }
+    } else if (campo === "pagamento") {
+        novoValor = prompt("Pagamento (Pix, Cartão de crédito, Cartão de débito, Dinheiro):", atual);
+        if (novoValor === null) return;
+        dadosInterpretados.pagamento = normalizarPagamento(novoValor);
+    } else if (campo === "categoria") {
+        novoValor = prompt("Categoria:", atual);
+        if (novoValor === null) return;
+        dadosInterpretados.categoria = capitalizar(novoValor.trim() || "Outros");
+    } else if (campo === "descricao") {
+        novoValor = prompt("Descrição:", atual);
+        if (novoValor === null) return;
+        dadosInterpretados.descricao = novoValor.trim() || "Sem descrição";
+    }
+
+    mostrarConfirmacao(dadosInterpretados);
+}
+
+async function carregarDashboard(mostrarMensagem = false) {
+    listaCategorias.textContent = "Carregando...";
+    listaCategorias.classList.add("vazio");
+    listaUltimos.textContent = "Carregando...";
+    listaUltimos.classList.add("vazio");
+
+    const resposta = await backendDashboard();
+
+    if (!resposta || !resposta.ok) {
+        listaCategorias.textContent = "Não consegui carregar o resumo.";
+        listaUltimos.textContent = "Não consegui carregar os últimos lançamentos.";
+        if (mostrarMensagem) mostrarToast("Erro ao carregar resumo.", "erro");
+        return;
+    }
+
+    renderizarDashboard(resposta.dados);
+    if (mostrarMensagem) mostrarToast("Resumo atualizado.", "sucesso");
+}
+
+function renderizarDashboard(dados) {
+    dashboardMes.textContent = `📊 ${dados.mes || "Resumo"}`;
+    totalReceitas.textContent = formatarMoeda(dados.receitas || 0);
+    totalDespesas.textContent = formatarMoeda(dados.despesas || 0);
+    saldoMes.textContent = formatarMoeda(dados.saldo || 0);
+
+    saldoMes.parentElement.classList.toggle("positivo", Number(dados.saldo) >= 0);
+    saldoMes.parentElement.classList.toggle("negativo", Number(dados.saldo) < 0);
+
+    renderizarCategorias(dados.categorias || []);
+    renderizarUltimos(dados.ultimos || []);
+}
+
+function renderizarCategorias(categorias) {
+    listaCategorias.innerHTML = "";
+
+    if (!categorias.length) {
+        listaCategorias.textContent = "Nenhuma despesa registrada neste mês.";
+        listaCategorias.classList.add("vazio");
+        return;
+    }
+
+    listaCategorias.classList.remove("vazio");
+
+    categorias.forEach(item => {
+        const div = document.createElement("div");
+        div.className = "item-dashboard";
+        div.innerHTML = `
+            <div>
+                <span class="principal">${obterIconeCategoria(item.categoria)} ${item.categoria}</span>
+                <span class="secundario">${item.quantidade} lançamento(s)</span>
+            </div>
+            <span class="valor negativo">${formatarMoeda(item.total)}</span>
+        `;
+        listaCategorias.appendChild(div);
+    });
+}
+
+function renderizarUltimos(ultimos) {
+    listaUltimos.innerHTML = "";
+
+    if (!ultimos.length) {
+        listaUltimos.textContent = "Nenhum lançamento recente.";
+        listaUltimos.classList.add("vazio");
+        return;
+    }
+
+    listaUltimos.classList.remove("vazio");
+
+    ultimos.forEach(item => {
+        const ehReceita = item.tipo === "Receita";
+        const div = document.createElement("div");
+        div.className = "item-dashboard";
+        div.innerHTML = `
+            <div>
+                <span class="principal">${obterIconeCategoria(item.categoria, item.tipo)} ${capitalizar(item.descricao)}</span>
+                <span class="secundario">${item.pessoa || ""} • ${item.categoria || "Outros"}</span>
+            </div>
+            <span class="valor ${ehReceita ? "positivo" : "negativo"}">${ehReceita ? "+" : "-"}${formatarMoeda(item.valor)}</span>
+        `;
+        listaUltimos.appendChild(div);
+    });
+}
+
+function trocarTela(tela) {
+    const dashboardAtivo = tela === "dashboard";
+
+    telaRegistro.classList.toggle("ativa", !dashboardAtivo);
+    telaDashboard.classList.toggle("ativa", dashboardAtivo);
+    navRegistro.classList.toggle("ativo", !dashboardAtivo);
+    navDashboard.classList.toggle("ativo", dashboardAtivo);
+
+    if (dashboardAtivo) {
+        carregarDashboard();
+    } else {
+        setTimeout(() => input.focus(), 80);
+    }
 }
 
 function mostrarToast(mensagem, tipo = "sucesso") {
     toastMensagem.textContent = mensagem;
-
     toast.className = "toast";
-    toast.classList.add(tipo);
-    toast.classList.add("mostrar");
+    toast.classList.add(tipo, "mostrar");
 
     clearTimeout(toastTimer);
-
     toastTimer = setTimeout(() => {
         toast.classList.remove("mostrar");
     }, 2200);
 }
 
+function setBotaoCarregando(botaoAlvo, texto) {
+    botaoAlvo.dataset.textoOriginal = botaoAlvo.textContent;
+    botaoAlvo.textContent = texto;
+    botaoAlvo.disabled = true;
+}
+
+function restaurarBotao(botaoAlvo, textoPadrao) {
+    botaoAlvo.textContent = textoPadrao || botaoAlvo.dataset.textoOriginal || "Salvar";
+    botaoAlvo.disabled = false;
+}
+
+function normalizarNumero(valor) {
+    const limpo = String(valor).replace(/[^\d,\.]/g, "").replace(",", ".");
+    return Number(limpo);
+}
+
+function normalizarPagamento(valor) {
+    const raw = removerAcentos(String(valor).toLowerCase());
+    if (raw.includes("pix")) return "Pix";
+    if (raw.includes("debito") || raw === "cd") return "Cartão de débito";
+    if (raw.includes("credito") || raw === "cc") return "Cartão de crédito";
+    if (raw.includes("dinheiro") || raw === "din") return "Dinheiro";
+    return capitalizar(valor.trim() || "Não informado");
+}
+
 function formatarMoeda(valor) {
-    return Number(valor).toLocaleString("pt-BR", {
+    return Number(valor || 0).toLocaleString("pt-BR", {
         style: "currency",
         currency: "BRL"
     });
 }
 
-botao.addEventListener("click", continuar);
+function capitalizar(texto) {
+    const valor = String(texto || "").trim();
+    if (!valor) return "";
+    return valor.charAt(0).toUpperCase() + valor.slice(1);
+}
 
-input.addEventListener("keydown", function(event) {
-    if (event.key === "Enter") {
-        continuar();
-    }
+function removerAcentos(texto) {
+    return String(texto || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+}
+
+function obterIconeCategoria(categoria = "", tipo = "") {
+    if (tipo === "Receita") return "💵";
+
+    const raw = removerAcentos(categoria.toLowerCase());
+
+    if (raw.includes("mercado")) return "🛒";
+    if (raw.includes("alimentacao") || raw.includes("restaurante")) return "🍔";
+    if (raw.includes("combustivel")) return "⛽";
+    if (raw.includes("saude")) return "💊";
+    if (raw.includes("casa")) return "🏠";
+    if (raw.includes("lazer")) return "🎮";
+    if (raw.includes("eletronico")) return "💻";
+    if (raw.includes("recebimento")) return "💵";
+
+    return "🏷";
+}
+
+botao.addEventListener("click", continuar);
+input.addEventListener("keydown", event => {
+    if (event.key === "Enter") continuar();
 });
 
 btnEditar.addEventListener("click", fecharModal);
-
 btnConfirmar.addEventListener("click", salvarLancamento);
+btnTrocarUsuario.addEventListener("click", abrirModalUsuario);
+btnAtualizarDashboard.addEventListener("click", () => carregarDashboard(true));
+
+navRegistro.addEventListener("click", () => trocarTela("registro"));
+navDashboard.addEventListener("click", () => trocarTela("dashboard"));
+
+modalUsuario.querySelectorAll(".btn-opcao-usuario").forEach(botaoUsuario => {
+    botaoUsuario.addEventListener("click", () => selecionarUsuario(botaoUsuario.dataset.usuario));
+});
+
+modal.querySelectorAll(".recibo-linha").forEach(linha => {
+    linha.addEventListener("click", () => editarCampo(linha.dataset.edit));
+});
+
+iniciarApp();
