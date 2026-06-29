@@ -5,31 +5,30 @@
 }
 
 :root {
-    --cor-fundo: #F5F7FA;
-    --cor-card: #FFFFFF;
-    --cor-principal: #2E7D32;
-    --cor-principal-hover: #256628;
-    --cor-texto: #111827;
-    --cor-texto-secundario: #6B7280;
-    --cor-borda: #E5E7EB;
-    --cor-sombra: rgba(15, 23, 42, .08);
-    --cor-despesa-bg: #FEE2E2;
-    --cor-despesa: #991B1B;
-    --cor-receita-bg: #DCFCE7;
-    --cor-receita: #166534;
+    --fundo: #F5F7FA;
+    --card: #FFFFFF;
+    --verde: #2E7D32;
+    --verde-hover: #256628;
+    --texto: #111827;
+    --cinza: #6B7280;
+    --borda: #E5E7EB;
+    --sombra: rgba(15, 23, 42, .08);
+    --vermelho-bg: #FEE2E2;
+    --vermelho: #991B1B;
+    --verde-bg: #DCFCE7;
+    --verde-texto: #166534;
 }
 
-html {
+html,
+body {
     min-height: 100%;
-    background: var(--cor-fundo);
+    background: var(--fundo);
 }
 
 body {
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, Helvetica, sans-serif;
-    background: var(--cor-fundo);
-    min-height: 100vh;
-    color: var(--cor-texto);
-    padding: 20px 20px calc(92px + env(safe-area-inset-bottom));
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
+    color: var(--texto);
+    padding: 22px 18px 96px;
 }
 
 button,
@@ -39,6 +38,8 @@ select {
 }
 
 button {
+    border: none;
+    cursor: pointer;
     -webkit-tap-highlight-color: transparent;
 }
 
@@ -58,43 +59,41 @@ button {
 
 .topo-app {
     display: flex;
-    justify-content: space-between;
-    gap: 16px;
     align-items: flex-start;
-    margin-bottom: 20px;
+    justify-content: space-between;
+    gap: 14px;
+    margin-bottom: 22px;
 }
 
 .eyebrow {
-    display: inline-block;
-    color: var(--cor-principal);
+    display: block;
+    color: var(--verde);
     font-size: 13px;
     font-weight: 700;
     margin-bottom: 6px;
 }
 
 h1 {
-    font-size: 30px;
-    line-height: 1.1;
+    font-size: 34px;
+    line-height: 1.05;
     margin-bottom: 8px;
 }
 
 h2 {
     font-size: 20px;
-    line-height: 1.2;
 }
 
 p,
 .texto-apoio {
-    color: var(--cor-texto-secundario);
-    font-size: 15px;
-    line-height: 1.45;
+    color: var(--cinza);
+    font-size: 16px;
+    line-height: 1.4;
 }
 
 .card {
-    background: var(--cor-card);
-    border: 1px solid rgba(255, 255, 255, .8);
+    background: var(--card);
     border-radius: 24px;
-    box-shadow: 0 16px 42px var(--cor-sombra);
+    box-shadow: 0 16px 42px var(--sombra);
 }
 
 .captura-card {
@@ -105,44 +104,30 @@ input,
 select {
     width: 100%;
     padding: 16px;
-    border: 1px solid var(--cor-borda);
+    border: 1px solid var(--borda);
     border-radius: 16px;
-    background: #FFFFFF;
-    color: var(--cor-texto);
+    background: white;
     font-size: 18px;
     outline: none;
-    transition: border-color .2s, box-shadow .2s;
 }
 
 input:focus,
 select:focus {
-    border-color: var(--cor-principal);
+    border-color: var(--verde);
     box-shadow: 0 0 0 4px rgba(46, 125, 50, .10);
 }
 
+/* Esconde exemplos no beta mobile para manter captura limpa */
 .exemplos {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
-    margin-top: 14px;
-}
-
-.exemplos span {
-    background: #F3F4F6;
-    color: var(--cor-texto-secundario);
-    border-radius: 999px;
-    padding: 7px 10px;
-    font-size: 12px;
+    display: none;
 }
 
 .btn-primario,
 .btn-secundario,
 .usuario-chip,
 .btn-opcao-usuario {
-    border: none;
-    cursor: pointer;
     border-radius: 16px;
-    transition: transform .15s, opacity .2s, background .2s;
+    transition: .15s;
 }
 
 .btn-primario:active,
@@ -158,20 +143,10 @@ select:focus {
     width: 100%;
     margin-top: 20px;
     padding: 16px;
-    background: var(--cor-principal);
+    background: var(--verde);
     color: white;
     font-size: 17px;
     font-weight: 700;
-}
-
-.btn-primario:hover {
-    background: var(--cor-principal-hover);
-}
-
-.btn-primario:disabled,
-.btn-secundario:disabled {
-    opacity: .65;
-    cursor: not-allowed;
 }
 
 .btn-secundario {
@@ -184,13 +159,18 @@ select:focus {
     font-weight: 700;
 }
 
+.btn-primario:disabled,
+.btn-secundario:disabled {
+    opacity: .65;
+}
+
 .usuario-chip {
-    flex: 0 0 auto;
-    margin-top: 2px;
-    padding: 9px 12px;
-    background: #FFFFFF;
-    color: var(--cor-texto);
-    border: 1px solid var(--cor-borda);
+    width: auto;
+    min-width: 90px;
+    padding: 10px 12px;
+    background: white;
+    color: var(--texto);
+    border: 1px solid var(--borda);
     box-shadow: 0 8px 22px rgba(15, 23, 42, .05);
     font-size: 13px;
     font-weight: 700;
@@ -208,7 +188,7 @@ select:focus {
     display: flex;
     justify-content: center;
     align-items: center;
-    padding: 20px;
+    padding: 18px;
     z-index: 1000;
     backdrop-filter: blur(8px);
 }
@@ -222,22 +202,6 @@ select:focus {
     border-radius: 28px;
     padding: 24px;
     box-shadow: 0 22px 60px rgba(15, 23, 42, .20);
-    animation: aparecer .22s ease-out;
-}
-
-.modal-card.compacto {
-    max-width: 360px;
-}
-
-@keyframes aparecer {
-    from {
-        opacity: 0;
-        transform: translateY(18px) scale(.98);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0) scale(1);
-    }
 }
 
 .modal-header {
@@ -249,31 +213,27 @@ select:focus {
 }
 
 .tipo-lancamento {
-    flex: 0 0 auto;
     display: inline-flex;
-    align-items: center;
-    justify-content: center;
     padding: 8px 12px;
     border-radius: 999px;
     font-weight: 800;
     font-size: 12px;
-    letter-spacing: .04em;
     text-transform: uppercase;
 }
 
 .tipo-despesa {
-    background: var(--cor-despesa-bg);
-    color: var(--cor-despesa);
+    background: var(--vermelho-bg);
+    color: var(--vermelho);
 }
 
 .tipo-receita {
-    background: var(--cor-receita-bg);
-    color: var(--cor-receita);
+    background: var(--verde-bg);
+    color: var(--verde-texto);
 }
 
 .recibo {
-    border-top: 1px solid var(--cor-borda);
-    border-bottom: 1px solid var(--cor-borda);
+    border-top: 1px solid var(--borda);
+    border-bottom: 1px solid var(--borda);
     padding: 10px 0;
 }
 
@@ -287,21 +247,17 @@ select:focus {
     gap: 10px;
     min-height: 54px;
     padding: 8px 0;
-    color: var(--cor-texto);
     text-align: left;
-    cursor: pointer;
 }
 
 .recibo-linha span:nth-child(2) {
     font-size: 17px;
     font-weight: 650;
-    word-break: break-word;
 }
 
 .recibo-linha small {
     justify-self: end;
     opacity: .55;
-    font-size: 13px;
 }
 
 .icone {
@@ -315,17 +271,17 @@ select:focus {
 }
 
 .detalhes-extras {
-    margin-top: 4px;
+    margin-top: 6px;
     padding: 12px 14px;
     border-radius: 16px;
     background: #F9FAFB;
-    color: var(--cor-texto-secundario);
+    color: var(--cinza);
     line-height: 1.5;
     font-size: 14px;
 }
 
 .detalhes-extras strong {
-    color: var(--cor-texto);
+    color: var(--texto);
 }
 
 .acoes {
@@ -343,15 +299,14 @@ select:focus {
 .btn-opcao-usuario {
     width: 100%;
     padding: 16px;
-    background: var(--cor-principal);
-    color: #FFFFFF;
+    background: var(--verde);
+    color: white;
     font-weight: 800;
     font-size: 17px;
 }
 
 .dashboard-grid {
     display: grid;
-    grid-template-columns: 1fr;
     gap: 12px;
     margin-bottom: 14px;
 }
@@ -362,24 +317,23 @@ select:focus {
 
 .indicador span {
     display: block;
-    color: var(--cor-texto-secundario);
+    color: var(--cinza);
     font-size: 14px;
     margin-bottom: 8px;
 }
 
 .indicador strong {
-    font-size: 25px;
-    letter-spacing: -.02em;
+    font-size: 24px;
 }
 
 .indicador.receita strong,
 .indicador.saldo.positivo strong {
-    color: var(--cor-receita);
+    color: var(--verde-texto);
 }
 
 .indicador.despesa strong,
 .indicador.saldo.negativo strong {
-    color: var(--cor-despesa);
+    color: var(--vermelho);
 }
 
 .bloco-dashboard {
@@ -397,7 +351,7 @@ select:focus {
 }
 
 .lista-dashboard.vazio {
-    color: var(--cor-texto-secundario);
+    color: var(--cinza);
     font-size: 14px;
 }
 
@@ -414,30 +368,31 @@ select:focus {
     border-bottom: none;
 }
 
-.item-dashboard .principal {
+.principal {
     font-weight: 700;
 }
 
-.item-dashboard .secundario {
+.secundario {
     display: block;
     margin-top: 3px;
-    color: var(--cor-texto-secundario);
+    color: var(--cinza);
     font-size: 13px;
 }
 
-.item-dashboard .valor {
+.valor {
     font-weight: 800;
     white-space: nowrap;
 }
 
 .valor.negativo {
-    color: var(--cor-despesa);
+    color: var(--vermelho);
 }
 
 .valor.positivo {
-    color: var(--cor-receita);
+    color: var(--verde-texto);
 }
 
+/* Navegação inferior corrigida */
 .bottom-nav {
     position: fixed;
     left: 50%;
@@ -448,11 +403,11 @@ select:focus {
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 8px;
-    background: rgba(255, 255, 255, .88);
-    border: 1px solid rgba(229, 231, 235, .9);
+    background: rgba(255,255,255,.92);
+    border: 1px solid rgba(229,231,235,.9);
     border-radius: 24px;
     padding: 8px;
-    box-shadow: 0 18px 46px rgba(15, 23, 42, .12);
+    box-shadow: 0 18px 46px rgba(15,23,42,.12);
     backdrop-filter: blur(14px);
     z-index: 800;
 }
@@ -462,9 +417,8 @@ select:focus {
     border-radius: 18px;
     padding: 10px 6px;
     background: transparent;
-    color: var(--cor-texto-secundario);
+    color: var(--cinza);
     font-weight: 800;
-    cursor: pointer;
 }
 
 .bottom-nav button span {
@@ -475,7 +429,7 @@ select:focus {
 
 .bottom-nav button.ativo {
     background: #E8F5E9;
-    color: var(--cor-principal);
+    color: var(--verde);
 }
 
 .toast {
@@ -504,10 +458,47 @@ select:focus {
     transform: translateX(-50%) translateY(0);
 }
 
-.toast.sucesso { background: #15803D; }
-.toast.erro { background: #B91C1C; }
-.toast.info { background: #1F2937; }
+.toast.sucesso {
+    background: #15803D;
+}
 
+.toast.erro {
+    background: #B91C1C;
+}
+
+.toast.info {
+    background: #1F2937;
+}
+
+/* Ajuste específico para celular */
+@media (max-width: 519px) {
+    body {
+        padding: 22px 18px 104px;
+    }
+
+    .topo-app {
+        display: block;
+    }
+
+    .usuario-chip {
+        margin-top: 18px;
+        width: 100%;
+    }
+
+    h1 {
+        font-size: 34px;
+    }
+
+    .captura-card {
+        padding: 22px;
+    }
+
+    .dashboard-topo .usuario-chip {
+        margin-top: 18px;
+    }
+}
+
+/* Desktop/tablet */
 @media (min-width: 520px) {
     body {
         display: flex;
