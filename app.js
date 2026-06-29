@@ -1,7 +1,7 @@
 /*
 ====================================
 Finanças da Família
-Versão: 0.6.0-alpha
+Versão: 0.7.0-beta
 Arquivo: app.js
 ====================================
 */
@@ -123,7 +123,12 @@ async function continuar() {
         return;
     }
 
-    dadosInterpretados = resposta.dados;
+    dadosInterpretados = {
+        ...resposta.dados,
+        _categoriaOriginal: resposta.dados.categoria || "Outros",
+        _textoOriginal: texto
+    };
+
     mostrarConfirmacao(dadosInterpretados);
 }
 
@@ -194,7 +199,8 @@ async function salvarLancamento() {
         return;
     }
 
-    mostrarToast(mensagemSucesso(dadosInterpretados), "sucesso");
+    const aprendeuCategoria = await aprenderCategoriaSeNecessario();
+    mostrarToast(mensagemSucesso(dadosInterpretados, aprendeuCategoria), "sucesso");
 
     setTimeout(() => {
         fecharModal();
@@ -206,10 +212,36 @@ async function salvarLancamento() {
     }, 450);
 }
 
-function mensagemSucesso(dados) {
+function mensagemSucesso(dados, aprendeuCategoria = false) {
+    if (aprendeuCategoria) return "Salvo. Categoria aprendida.";
     if (dados.parcelado) return "Parcelas registradas.";
     if (dados.recorrente) return "Conta fixa cadastrada.";
     return "Lançamento salvo.";
+}
+
+async function aprenderCategoriaSeNecessario() {
+    if (!dadosInterpretados) return false;
+
+    const categoriaOriginal = normalizarTextoComparacao(dadosInterpretados._categoriaOriginal || "Outros");
+    const categoriaAtual = normalizarTextoComparacao(dadosInterpretados.categoria || "Outros");
+
+    if (!categoriaAtual || categoriaOriginal === categoriaAtual) {
+        return false;
+    }
+
+    const textoBase = dadosInterpretados._textoOriginal || dadosInterpretados.descricao || "";
+
+    const resposta = await backendAprenderCategoria({
+        palavra: textoBase,
+        categoria: dadosInterpretados.categoria
+    });
+
+    return Boolean(
+        resposta &&
+        resposta.ok &&
+        resposta.resultado &&
+        resposta.resultado.aprendido
+    );
 }
 
 function editarCampo(campo) {
@@ -448,6 +480,10 @@ function setBotaoCarregando(botaoAlvo, texto) {
 function restaurarBotao(botaoAlvo, textoPadrao) {
     botaoAlvo.textContent = textoPadrao || botaoAlvo.dataset.textoOriginal || "Salvar";
     botaoAlvo.disabled = false;
+}
+
+function normalizarTextoComparacao(texto) {
+    return removerAcentos(String(texto || "").toLowerCase()).trim();
 }
 
 function normalizarNumero(valor) {
