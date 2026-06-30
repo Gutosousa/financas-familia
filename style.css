@@ -826,3 +826,78 @@ select:focus {
         font-size: 20px;
     }
 }
+
+/* ==========================
+   Beta 0.8 — Histórico + parcelas na dashboard
+========================== */
+
+.bottom-nav {
+    grid-template-columns: repeat(3, 1fr);
+}
+
+.historico-mes {
+    grid-template-columns: 1fr;
+    max-width: 220px;
+}
+
+.mes-atual.unico {
+    padding: 4px 10px;
+}
+
+.historico-paginacao {
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    align-items: center;
+    gap: 10px;
+    margin-top: 18px;
+    padding-top: 14px;
+    border-top: 1px solid #F3F4F6;
+}
+
+.historico-paginacao .btn-secundario {
+    margin-top: 0;
+    padding: 11px 12px;
+    font-size: 14px;
+    border-radius: 14px;
+}
+
+.historico-paginacao span {
+    color: var(--cinza);
+    font-size: 13px;
+    font-weight: 750;
+    white-space: nowrap;
+}
+
+.item-historico .secundario {
+    line-height: 1.35;
+}
+
+@media (max-width: 519px) {
+    .bottom-nav {
+        gap: 6px;
+    }
+
+    .bottom-nav button {
+        padding: 9px 4px;
+        font-size: 15px;
+    }
+
+    .bottom-nav button span {
+        font-size: 11px;
+    }
+
+    .historico-paginacao {
+        grid-template-columns: 1fr 1fr;
+    }
+
+    .historico-paginacao span {
+        grid-column: 1 / -1;
+        grid-row: 1;
+        text-align: center;
+        margin-bottom: 2px;
+    }
+
+    .historico-paginacao .btn-secundario {
+        grid-row: 2;
+    }
+}
