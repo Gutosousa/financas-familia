@@ -16,7 +16,7 @@
         <section id="telaRegistro" class="tela ativa">
             <header class="topo-app">
                 <div>
-                    <span class="eyebrow">Beta Familiar 0.5</span>
+                    <span class="eyebrow">Beta Familiar 0.8</span>
                     <h1>💰 Finanças</h1>
                     <p>O que aconteceu hoje?</p>
                 </div>
@@ -83,15 +83,56 @@
             </section>
 
             <section class="card bloco-dashboard">
+                <h2>Compras parceladas</h2>
+                <div id="listaParcelas" class="lista-dashboard vazio">Carregando...</div>
+            </section>
+
+            <section class="card bloco-dashboard">
                 <h2>Últimos lançamentos</h2>
                 <div id="listaUltimos" class="lista-dashboard vazio">Carregando...</div>
+            </section>
+        </section>
+
+        <section id="telaHistorico" class="tela">
+            <header class="topo-app dashboard-topo">
+                <div>
+                    <span class="eyebrow">Histórico</span>
+                    <div class="seletor-mes historico-mes" aria-label="Mês do histórico">
+                        <div class="mes-atual unico">
+                            <strong id="historicoMesNome">Resumo</strong>
+                            <span id="historicoAno">----</span>
+                        </div>
+                    </div>
+                    <p>Todos os lançamentos do mês, de 15 em 15.</p>
+                </div>
+            </header>
+
+            <section class="card bloco-dashboard">
+                <h2>Lançamentos do mês</h2>
+                <div id="listaHistorico" class="lista-dashboard vazio">Carregando...</div>
+
+                <div class="historico-paginacao">
+                    <button id="btnHistoricoAnterior" class="btn-secundario" type="button">← Anterior</button>
+                    <span id="historicoPaginaInfo">Página 1 de 1</span>
+                    <button id="btnHistoricoProximo" class="btn-secundario" type="button">Próxima →</button>
+                </div>
             </section>
         </section>
     </main>
 
     <nav class="bottom-nav" aria-label="Navegação principal">
-        <button id="navRegistro" class="ativo" type="button">🏠<span>Registrar</span></button>
-        <button id="navDashboard" type="button">📊<span>Resumo</span></button>
+        <button id="navRegistro" class="ativo" type="button">
+            🏠
+            <span>Registrar</span>
+        </button>
+        <button id="navDashboard" type="button">
+            📊
+            <span>Resumo</span>
+        </button>
+        <button id="navHistorico" type="button">
+            📋
+            <span>Histórico</span>
+        </button>
     </nav>
 
     <div id="modalUsuario" class="modal oculto">
