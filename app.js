@@ -1,7 +1,7 @@
 /*
 ====================================
 Finanças da Família
-Versão: 0.7.0-beta
+Versão: 0.8.0-beta
 Arquivo: app.js
 ====================================
 */
@@ -15,14 +15,20 @@ const PLACEHOLDERS = [
     "Ex.: salário 5300 pix"
 ];
 
+const LIMITE_HISTORICO = 15;
+
 const input = document.getElementById("inputMovimento");
 const botao = document.getElementById("btnContinuar");
 const btnTrocarUsuario = document.getElementById("btnTrocarUsuario");
 
 const telaRegistro = document.getElementById("telaRegistro");
 const telaDashboard = document.getElementById("telaDashboard");
+const telaHistorico = document.getElementById("telaHistorico");
+
 const navRegistro = document.getElementById("navRegistro");
 const navDashboard = document.getElementById("navDashboard");
+const navHistorico = document.getElementById("navHistorico");
+
 const btnAtualizarDashboard = document.getElementById("btnAtualizarDashboard");
 
 const modalUsuario = document.getElementById("modalUsuario");
@@ -46,11 +52,21 @@ const dashboardMesNome = document.getElementById("dashboardMesNome");
 const dashboardAno = document.getElementById("dashboardAno");
 const btnMesAnterior = document.getElementById("btnMesAnterior");
 const btnMesProximo = document.getElementById("btnMesProximo");
+
 const totalReceitas = document.getElementById("totalReceitas");
 const totalDespesas = document.getElementById("totalDespesas");
 const saldoMes = document.getElementById("saldoMes");
+
 const listaCategorias = document.getElementById("listaCategorias");
+const listaParcelas = document.getElementById("listaParcelas");
 const listaUltimos = document.getElementById("listaUltimos");
+
+const historicoMesNome = document.getElementById("historicoMesNome");
+const historicoAno = document.getElementById("historicoAno");
+const listaHistorico = document.getElementById("listaHistorico");
+const btnHistoricoAnterior = document.getElementById("btnHistoricoAnterior");
+const btnHistoricoProximo = document.getElementById("btnHistoricoProximo");
+const historicoPaginaInfo = document.getElementById("historicoPaginaInfo");
 
 let dadosInterpretados = null;
 let toastTimer = null;
@@ -62,9 +78,13 @@ const dataHoje = new Date();
 let mesSelecionado = dataHoje.getMonth();
 let anoSelecionado = dataHoje.getFullYear();
 
+let paginaHistorico = 1;
+let totalPaginasHistorico = 1;
+
 function iniciarApp() {
     atualizarUsuarioNaTela();
     iniciarPlaceholders();
+    atualizarSeletorMes();
 
     if (!usuarioAtual) {
         abrirModalUsuario();
@@ -209,6 +229,7 @@ async function salvarLancamento() {
         dadosInterpretados = null;
         restaurarBotao(btnConfirmar, "Salvar");
         carregarDashboard(false);
+        carregarHistorico(false);
     }, 450);
 }
 
@@ -254,7 +275,9 @@ function editarCampo(campo) {
         const valorBase = dadosInterpretados.valor || dadosInterpretados.valorParcela || dadosInterpretados.valorTotal || 0;
         novoValor = prompt("Novo valor:", String(valorBase).replace(".", ","));
         if (novoValor === null) return;
+
         const numero = normalizarNumero(novoValor);
+
         if (!numero || numero <= 0) {
             mostrarToast("Valor inválido.", "erro");
             return;
@@ -268,7 +291,7 @@ function editarCampo(campo) {
             dadosInterpretados.valor = numero;
         }
     } else if (campo === "pagamento") {
-        novoValor = prompt("Pagamento (Pix, Cartão de crédito, Cartão de débito, Dinheiro):", atual);
+        novoValor = prompt("Pagamento (Pix, Cartão de crédito, Cartão de débito, Dinheiro, VA, VC, VT):", atual);
         if (novoValor === null) return;
         dadosInterpretados.pagamento = normalizarPagamento(novoValor);
     } else if (campo === "categoria") {
@@ -289,6 +312,12 @@ async function carregarDashboard(mostrarMensagem = false) {
 
     listaCategorias.textContent = "Carregando...";
     listaCategorias.classList.add("vazio");
+
+    if (listaParcelas) {
+        listaParcelas.textContent = "Carregando...";
+        listaParcelas.classList.add("vazio");
+    }
+
     listaUltimos.textContent = "Carregando...";
     listaUltimos.classList.add("vazio");
 
@@ -296,7 +325,13 @@ async function carregarDashboard(mostrarMensagem = false) {
 
     if (!resposta || !resposta.ok) {
         listaCategorias.textContent = "Não consegui carregar o resumo.";
+
+        if (listaParcelas) {
+            listaParcelas.textContent = "Não consegui carregar as parcelas.";
+        }
+
         listaUltimos.textContent = "Não consegui carregar os últimos lançamentos.";
+
         if (mostrarMensagem) mostrarToast("Erro ao carregar resumo.", "erro");
         return;
     }
@@ -327,6 +362,7 @@ function renderizarDashboard(dados) {
     saldoMes.parentElement.classList.toggle("negativo", Number(dados.saldo) < 0);
 
     renderizarCategorias(dados.categorias || []);
+    renderizarParcelas(dados.parcelas || []);
     renderizarUltimos(dados.ultimos || []);
 }
 
@@ -352,6 +388,35 @@ function renderizarCategorias(categorias) {
             <span class="valor negativo">${formatarMoeda(item.total)}</span>
         `;
         listaCategorias.appendChild(div);
+    });
+}
+
+function renderizarParcelas(parcelas) {
+    if (!listaParcelas) return;
+
+    listaParcelas.innerHTML = "";
+
+    if (!parcelas.length) {
+        listaParcelas.textContent = "Nenhuma compra parcelada neste mês.";
+        listaParcelas.classList.add("vazio");
+        return;
+    }
+
+    listaParcelas.classList.remove("vazio");
+
+    parcelas.forEach(item => {
+        const div = document.createElement("div");
+        div.className = "item-dashboard";
+
+        div.innerHTML = `
+            <div>
+                <span class="principal">${obterIconeCategoria(item.categoria)} ${capitalizar(item.descricao)}</span>
+                <span class="secundario">${item.parcela || ""} • ${item.categoria || "Outros"}</span>
+            </div>
+            <span class="valor negativo">${formatarMoeda(item.valor)}</span>
+        `;
+
+        listaParcelas.appendChild(div);
     });
 }
 
@@ -381,6 +446,110 @@ function renderizarUltimos(ultimos) {
     });
 }
 
+async function carregarHistorico(mostrarMensagem = false) {
+    if (!listaHistorico) return;
+
+    atualizarCabecalhoHistorico();
+
+    listaHistorico.textContent = "Carregando...";
+    listaHistorico.classList.add("vazio");
+
+    const resposta = await backendHistorico(
+        mesSelecionado,
+        anoSelecionado,
+        paginaHistorico,
+        LIMITE_HISTORICO
+    );
+
+    if (!resposta || !resposta.ok) {
+        listaHistorico.textContent = "Não consegui carregar o histórico.";
+        if (mostrarMensagem) mostrarToast("Erro ao carregar histórico.", "erro");
+        return;
+    }
+
+    renderizarHistorico(resposta.dados);
+
+    if (mostrarMensagem) mostrarToast("Histórico atualizado.", "sucesso");
+}
+
+function renderizarHistorico(dados) {
+    if (!listaHistorico) return;
+
+    paginaHistorico = Number(dados.pagina || 1);
+    totalPaginasHistorico = Number(dados.totalPaginas || 1);
+
+    atualizarCabecalhoHistorico();
+
+    listaHistorico.innerHTML = "";
+
+    const itens = dados.itens || [];
+
+    if (!itens.length) {
+        listaHistorico.textContent = "Nenhum lançamento neste mês.";
+        listaHistorico.classList.add("vazio");
+        atualizarPaginacaoHistorico();
+        return;
+    }
+
+    listaHistorico.classList.remove("vazio");
+
+    itens.forEach(item => {
+        const ehReceita = item.tipo === "Receita";
+        const div = document.createElement("div");
+        div.className = "item-dashboard item-historico";
+
+        div.innerHTML = `
+            <div>
+                <span class="principal">${obterIconeCategoria(item.categoria, item.tipo)} ${capitalizar(item.descricao)}</span>
+                <span class="secundario">${formatarDataCurta(item.data)} • ${item.pessoa || ""} • ${item.categoria || "Outros"}${item.parcela ? " • " + item.parcela : ""}</span>
+            </div>
+            <span class="valor ${ehReceita ? "positivo" : "negativo"}">${ehReceita ? "+" : "-"}${formatarMoeda(item.valor)}</span>
+        `;
+
+        listaHistorico.appendChild(div);
+    });
+
+    atualizarPaginacaoHistorico();
+}
+
+function atualizarCabecalhoHistorico() {
+    if (historicoMesNome) {
+        historicoMesNome.textContent = obterNomeMes(mesSelecionado);
+    }
+
+    if (historicoAno) {
+        historicoAno.textContent = String(anoSelecionado);
+    }
+}
+
+function atualizarPaginacaoHistorico() {
+    if (historicoPaginaInfo) {
+        historicoPaginaInfo.textContent = `Página ${paginaHistorico} de ${totalPaginasHistorico}`;
+    }
+
+    if (btnHistoricoAnterior) {
+        btnHistoricoAnterior.disabled = paginaHistorico <= 1;
+    }
+
+    if (btnHistoricoProximo) {
+        btnHistoricoProximo.disabled = paginaHistorico >= totalPaginasHistorico;
+    }
+}
+
+function historicoAnterior() {
+    if (paginaHistorico <= 1) return;
+
+    paginaHistorico--;
+    carregarHistorico();
+}
+
+function historicoProximo() {
+    if (paginaHistorico >= totalPaginasHistorico) return;
+
+    paginaHistorico++;
+    carregarHistorico();
+}
+
 function mesAnterior() {
     mesSelecionado--;
 
@@ -389,7 +558,9 @@ function mesAnterior() {
         anoSelecionado--;
     }
 
+    paginaHistorico = 1;
     carregarDashboard();
+    carregarHistorico();
 }
 
 function mesProximo() {
@@ -404,7 +575,9 @@ function mesProximo() {
         anoSelecionado++;
     }
 
+    paginaHistorico = 1;
     carregarDashboard();
+    carregarHistorico();
 }
 
 function atualizarSeletorMes() {
@@ -415,6 +588,8 @@ function atualizarSeletorMes() {
     if (dashboardAno) {
         dashboardAno.textContent = String(anoSelecionado);
     }
+
+    atualizarCabecalhoHistorico();
 
     if (btnMesProximo) {
         btnMesProximo.disabled = estaNoMesAtualOuFuturo();
@@ -447,14 +622,27 @@ function obterNomeMes(mes) {
 
 function trocarTela(tela) {
     const dashboardAtivo = tela === "dashboard";
+    const historicoAtivo = tela === "historico";
+    const registroAtivo = tela === "registro";
 
-    telaRegistro.classList.toggle("ativa", !dashboardAtivo);
+    telaRegistro.classList.toggle("ativa", registroAtivo);
     telaDashboard.classList.toggle("ativa", dashboardAtivo);
-    navRegistro.classList.toggle("ativo", !dashboardAtivo);
+
+    if (telaHistorico) {
+        telaHistorico.classList.toggle("ativa", historicoAtivo);
+    }
+
+    navRegistro.classList.toggle("ativo", registroAtivo);
     navDashboard.classList.toggle("ativo", dashboardAtivo);
+
+    if (navHistorico) {
+        navHistorico.classList.toggle("ativo", historicoAtivo);
+    }
 
     if (dashboardAtivo) {
         carregarDashboard();
+    } else if (historicoAtivo) {
+        carregarHistorico();
     } else {
         setTimeout(() => input.focus(), 80);
     }
@@ -493,10 +681,15 @@ function normalizarNumero(valor) {
 
 function normalizarPagamento(valor) {
     const raw = removerAcentos(String(valor).toLowerCase());
+
     if (raw.includes("pix")) return "Pix";
     if (raw.includes("debito") || raw === "cd") return "Cartão de débito";
     if (raw.includes("credito") || raw === "cc") return "Cartão de crédito";
     if (raw.includes("dinheiro") || raw === "din") return "Dinheiro";
+    if (raw === "va" || raw.includes("vale alimentacao")) return "Vale alimentação";
+    if (raw === "vc" || raw.includes("vale combustivel")) return "Vale combustível";
+    if (raw === "vt" || raw.includes("vale transporte")) return "Vale transporte";
+
     return capitalizar(valor.trim() || "Não informado");
 }
 
@@ -504,6 +697,19 @@ function formatarMoeda(valor) {
     return Number(valor || 0).toLocaleString("pt-BR", {
         style: "currency",
         currency: "BRL"
+    });
+}
+
+function formatarDataCurta(data) {
+    const d = new Date(data);
+
+    if (isNaN(d.getTime())) {
+        return "";
+    }
+
+    return d.toLocaleDateString("pt-BR", {
+        day: "2-digit",
+        month: "2-digit"
     });
 }
 
@@ -540,6 +746,7 @@ function iniciarPlaceholders() {
     input.placeholder = PLACEHOLDERS[0];
 
     clearInterval(placeholderTimer);
+
     placeholderTimer = setInterval(() => {
         if (document.activeElement === input && input.value.trim()) return;
 
@@ -549,6 +756,7 @@ function iniciarPlaceholders() {
 }
 
 botao.addEventListener("click", continuar);
+
 input.addEventListener("keydown", event => {
     if (event.key === "Enter") continuar();
 });
@@ -560,8 +768,20 @@ btnAtualizarDashboard.addEventListener("click", () => carregarDashboard(true));
 btnMesAnterior.addEventListener("click", mesAnterior);
 btnMesProximo.addEventListener("click", mesProximo);
 
+if (btnHistoricoAnterior) {
+    btnHistoricoAnterior.addEventListener("click", historicoAnterior);
+}
+
+if (btnHistoricoProximo) {
+    btnHistoricoProximo.addEventListener("click", historicoProximo);
+}
+
 navRegistro.addEventListener("click", () => trocarTela("registro"));
 navDashboard.addEventListener("click", () => trocarTela("dashboard"));
+
+if (navHistorico) {
+    navHistorico.addEventListener("click", () => trocarTela("historico"));
+}
 
 modalUsuario.querySelectorAll(".btn-opcao-usuario").forEach(botaoUsuario => {
     botaoUsuario.addEventListener("click", () => selecionarUsuario(botaoUsuario.dataset.usuario));
