@@ -1,7 +1,7 @@
 /*
 ====================================
 Finanças da Família
-Versão: 0.8.0-beta
+Versão: 0.8.1-beta
 Arquivo: services/api.js
 ====================================
 */
@@ -48,6 +48,14 @@ async function backendAprenderCategoria(dados) {
         ...dados
     });
 }
+
+async function backendExcluirLancamento(dados) {
+    return backendRequest({
+        acao: "excluirLancamento",
+        ...dados
+    });
+}
+
 
 async function backendRequest(payload) {
     try {
