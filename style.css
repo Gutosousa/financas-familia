@@ -284,6 +284,32 @@ select:focus {
     color: var(--texto);
 }
 
+.detalhe-conta-titulo {
+    margin: 2px 0 8px;
+}
+
+.detalhe-acao {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 10px 0;
+    background: transparent;
+    color: var(--cinza);
+    border-top: 1px solid #EEF2F7;
+    text-align: left;
+}
+
+.detalhe-acao strong {
+    color: var(--texto);
+    font-size: 14px;
+}
+
+.detalhe-acao:active {
+    transform: scale(.99);
+}
+
 .acoes {
     display: grid;
     grid-template-columns: 1fr 1fr;
