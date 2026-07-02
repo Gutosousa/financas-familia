@@ -1,7 +1,7 @@
 /*
 ====================================
 Finanças da Família
-Versão: 0.8.1-beta
+Versão: 0.9.0-beta
 Arquivo: services/api.js
 ====================================
 */
@@ -45,6 +45,13 @@ async function backendHistorico(mes, ano, pagina = 1, limite = 15) {
 async function backendAprenderCategoria(dados) {
     return backendRequest({
         acao: "aprenderCategoria",
+        ...dados
+    });
+}
+
+async function backendPagarContaFixa(dados) {
+    return backendRequest({
+        acao: "pagarContaFixa",
         ...dados
     });
 }
