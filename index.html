@@ -16,7 +16,7 @@
         <section id="telaRegistro" class="tela ativa">
             <header class="topo-app">
                 <div>
-                    <span class="eyebrow">Beta Familiar 0.8</span>
+                    <span class="eyebrow">Beta Familiar 0.8.1</span>
                     <h1>💰 Finanças</h1>
                     <p>O que aconteceu hoje?</p>
                 </div>
@@ -86,11 +86,6 @@
                 <h2>Compras parceladas</h2>
                 <div id="listaParcelas" class="lista-dashboard vazio">Carregando...</div>
             </section>
-
-            <section class="card bloco-dashboard">
-                <h2>Últimos lançamentos</h2>
-                <div id="listaUltimos" class="lista-dashboard vazio">Carregando...</div>
-            </section>
         </section>
 
         <section id="telaHistorico" class="tela">
@@ -154,6 +149,12 @@
             </div>
 
             <div class="recibo">
+                <button class="recibo-linha" data-edit="tipo" type="button">
+                    <span class="icone">🔄</span>
+                    <span id="confirmTipoEditavel">Tipo</span>
+                    <small>✏️</small>
+                </button>
+
                 <button class="recibo-linha" data-edit="descricao" type="button">
                     <span class="icone" id="iconeDescricao">📝</span>
                     <span id="confirmDescricao">Descrição</span>
