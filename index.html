@@ -16,7 +16,7 @@
         <section id="telaRegistro" class="tela ativa">
             <header class="topo-app">
                 <div>
-                    <span class="eyebrow">Beta Familiar 0.8.1</span>
+                    <span class="eyebrow">Beta Familiar 0.8.2</span>
                     <h1>💰 Finanças</h1>
                     <p>O que aconteceu hoje?</p>
                 </div>
@@ -75,6 +75,12 @@
                     <span>Saldo</span>
                     <strong id="saldoMes">R$ 0,00</strong>
                 </article>
+            </section>
+
+
+            <section id="cardBeneficios" class="card bloco-dashboard oculto">
+                <h2>Benefícios</h2>
+                <div id="listaBeneficios" class="lista-dashboard vazio">Carregando...</div>
             </section>
 
             <section class="card bloco-dashboard">
@@ -186,6 +192,24 @@
                 <button id="btnEditar" class="btn-secundario" type="button">Voltar</button>
                 <button id="btnConfirmar" class="btn-primario" type="button">Salvar</button>
             </div>
+        </div>
+    </div>
+
+
+    <div id="modalOpcoes" class="modal oculto">
+        <div class="modal-card compacto modal-opcoes-card">
+            <div class="modal-header">
+                <h2 id="modalOpcoesTitulo">Selecionar</h2>
+            </div>
+            <div id="modalOpcoesLista" class="lista-opcoes"></div>
+            <button id="btnFecharOpcoes" class="btn-secundario" type="button">Cancelar</button>
+        </div>
+    </div>
+
+    <div id="loadingOverlay" class="loading-overlay oculto">
+        <div class="loading-card">
+            <div class="spinner"></div>
+            <strong id="loadingMensagem">Carregando...</strong>
         </div>
     </div>
 
