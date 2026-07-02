@@ -37,6 +37,7 @@ const btnEditar = document.getElementById("btnEditar");
 const btnConfirmar = document.getElementById("btnConfirmar");
 
 const confirmTipo = document.getElementById("confirmTipo");
+const confirmTipoEditavel = document.getElementById("confirmTipoEditavel");
 const confirmDescricao = document.getElementById("confirmDescricao");
 const confirmCategoria = document.getElementById("confirmCategoria");
 const confirmValor = document.getElementById("confirmValor");
@@ -156,6 +157,9 @@ function mostrarConfirmacao(dados) {
     const ehReceita = dados.tipo === "Receita";
 
     confirmTipo.textContent = ehReceita ? "Receita" : "Despesa";
+    if (confirmTipoEditavel) {
+        confirmTipoEditavel.textContent = ehReceita ? "Receita" : "Despesa";
+    }
     confirmTipo.className = "tipo-lancamento";
     confirmTipo.classList.add(ehReceita ? "tipo-receita" : "tipo-despesa");
 
@@ -271,7 +275,28 @@ function editarCampo(campo) {
     const atual = dadosInterpretados[campo] || "";
     let novoValor = null;
 
-    if (campo === "valor") {
+    if (campo === "tipo") {
+        novoValor = prompt("Tipo (Despesa ou Receita):", dadosInterpretados.tipo || "Despesa");
+
+        if (novoValor === null) return;
+
+        const tipoNormalizado = normalizarTipo(novoValor);
+
+        if (!tipoNormalizado) {
+            mostrarToast("Tipo inválido.", "erro");
+            return;
+        }
+
+        dadosInterpretados.tipo = tipoNormalizado;
+
+        if (tipoNormalizado === "Receita" && (!dadosInterpretados.categoria || dadosInterpretados.categoria === "Outros")) {
+            dadosInterpretados.categoria = "Recebimento";
+        }
+
+        if (tipoNormalizado === "Despesa" && dadosInterpretados.categoria === "Recebimento") {
+            dadosInterpretados.categoria = "Outros";
+        }
+    } else if (campo === "valor") {
         const valorBase = dadosInterpretados.valor || dadosInterpretados.valorParcela || dadosInterpretados.valorTotal || 0;
         novoValor = prompt("Novo valor:", String(valorBase).replace(".", ","));
         if (novoValor === null) return;
@@ -318,8 +343,10 @@ async function carregarDashboard(mostrarMensagem = false) {
         listaParcelas.classList.add("vazio");
     }
 
-    listaUltimos.textContent = "Carregando...";
-    listaUltimos.classList.add("vazio");
+    if (listaUltimos) {
+        listaUltimos.textContent = "Carregando...";
+        listaUltimos.classList.add("vazio");
+    }
 
     const resposta = await backendDashboard(mesSelecionado, anoSelecionado);
 
@@ -330,7 +357,9 @@ async function carregarDashboard(mostrarMensagem = false) {
             listaParcelas.textContent = "Não consegui carregar as parcelas.";
         }
 
-        listaUltimos.textContent = "Não consegui carregar os últimos lançamentos.";
+        if (listaUltimos) {
+            listaUltimos.textContent = "Não consegui carregar os últimos lançamentos.";
+        }
 
         if (mostrarMensagem) mostrarToast("Erro ao carregar resumo.", "erro");
         return;
@@ -363,7 +392,10 @@ function renderizarDashboard(dados) {
 
     renderizarCategorias(dados.categorias || []);
     renderizarParcelas(dados.parcelas || []);
-    renderizarUltimos(dados.ultimos || []);
+
+    if (listaUltimos) {
+        renderizarUltimos(dados.ultimos || []);
+    }
 }
 
 function renderizarCategorias(categorias) {
@@ -503,13 +535,74 @@ function renderizarHistorico(dados) {
                 <span class="principal">${obterIconeCategoria(item.categoria, item.tipo)} ${capitalizar(item.descricao)}</span>
                 <span class="secundario">${formatarDataCurta(item.data)} • ${item.pessoa || ""} • ${item.categoria || "Outros"}${item.parcela ? " • " + item.parcela : ""}</span>
             </div>
-            <span class="valor ${ehReceita ? "positivo" : "negativo"}">${ehReceita ? "+" : "-"}${formatarMoeda(item.valor)}</span>
+
+            <div class="historico-acoes">
+                <span class="valor ${ehReceita ? "positivo" : "negativo"}">${ehReceita ? "+" : "-"}${formatarMoeda(item.valor)}</span>
+                <button
+                    class="btn-excluir-lancamento"
+                    type="button"
+                    aria-label="Excluir lançamento"
+                    data-row-index="${item.rowIndex || ""}"
+                    data-id-grupo="${item.idGrupo || ""}"
+                    data-tipo-registro="${item.tipoRegistro || ""}"
+                    data-descricao="${capitalizar(item.descricao)}">
+                    🗑
+                </button>
+            </div>
         `;
 
         listaHistorico.appendChild(div);
     });
 
     atualizarPaginacaoHistorico();
+}
+
+
+async function excluirLancamentoHistorico(botaoExcluir) {
+    const rowIndex = Number(botaoExcluir.dataset.rowIndex || 0);
+    const idGrupo = botaoExcluir.dataset.idGrupo || "";
+    const tipoRegistro = botaoExcluir.dataset.tipoRegistro || "";
+    const descricao = botaoExcluir.dataset.descricao || "este lançamento";
+
+    if (!rowIndex && !idGrupo) {
+        mostrarToast("Não consegui identificar o lançamento.", "erro");
+        return;
+    }
+
+    let modo = "linha";
+
+    if (tipoRegistro === "Parcela" && idGrupo) {
+        const excluirTudo = confirm(
+            `Excluir "${descricao}"?\n\nOK = excluir toda a compra parcelada.\nCancelar = excluir somente esta parcela.`
+        );
+
+        modo = excluirTudo ? "grupo" : "linha";
+    } else {
+        const confirmar = confirm(`Excluir "${descricao}"?`);
+
+        if (!confirmar) {
+            return;
+        }
+    }
+
+    botaoExcluir.disabled = true;
+
+    const resposta = await backendExcluirLancamento({
+        modo,
+        rowIndex,
+        idGrupo
+    });
+
+    if (!resposta || !resposta.ok) {
+        botaoExcluir.disabled = false;
+        mostrarToast("Não consegui excluir o lançamento.", "erro");
+        return;
+    }
+
+    mostrarToast("Lançamento excluído.", "sucesso");
+
+    carregarDashboard(false);
+    carregarHistorico(false);
 }
 
 function atualizarCabecalhoHistorico() {
@@ -679,6 +772,20 @@ function normalizarNumero(valor) {
     return Number(limpo);
 }
 
+function normalizarTipo(valor) {
+    const raw = removerAcentos(String(valor || "").toLowerCase()).trim();
+
+    if (["receita", "recebimento", "entrada", "ganho"].includes(raw)) {
+        return "Receita";
+    }
+
+    if (["despesa", "gasto", "saida", "saída", "compra"].includes(raw)) {
+        return "Despesa";
+    }
+
+    return "";
+}
+
 function normalizarPagamento(valor) {
     const raw = removerAcentos(String(valor).toLowerCase());
 
@@ -730,6 +837,7 @@ function obterIconeCategoria(categoria = "", tipo = "") {
 
     if (raw.includes("mercado")) return "🛒";
     if (raw.includes("alimentacao") || raw.includes("restaurante")) return "🍔";
+    if (raw.includes("carro") || raw.includes("veiculo") || raw.includes("veículo")) return "🚗";
     if (raw.includes("combustivel")) return "⛽";
     if (raw.includes("saude")) return "💊";
     if (raw.includes("casa")) return "🏠";
@@ -781,6 +889,16 @@ navDashboard.addEventListener("click", () => trocarTela("dashboard"));
 
 if (navHistorico) {
     navHistorico.addEventListener("click", () => trocarTela("historico"));
+}
+
+if (listaHistorico) {
+    listaHistorico.addEventListener("click", event => {
+        const botaoExcluir = event.target.closest(".btn-excluir-lancamento");
+
+        if (botaoExcluir) {
+            excluirLancamentoHistorico(botaoExcluir);
+        }
+    });
 }
 
 modalUsuario.querySelectorAll(".btn-opcao-usuario").forEach(botaoUsuario => {
