@@ -16,7 +16,7 @@
         <section id="telaRegistro" class="tela ativa">
             <header class="topo-app">
                 <div>
-                    <span class="eyebrow">Beta Familiar 0.8.2</span>
+                    <span class="eyebrow">Beta Familiar 0.9</span>
                     <h1>💰 Finanças</h1>
                     <p>O que aconteceu hoje?</p>
                 </div>
@@ -67,14 +67,31 @@
                 </article>
 
                 <article class="card indicador despesa">
-                    <span>Despesas</span>
+                    <span>Despesas pagas</span>
                     <strong id="totalDespesas">R$ 0,00</strong>
                 </article>
 
+                <article class="card indicador pendente">
+                    <span>Contas pendentes</span>
+                    <strong id="totalPendentes">R$ 0,00</strong>
+                </article>
+
                 <article class="card indicador saldo">
-                    <span>Saldo</span>
+                    <span>Saldo atual</span>
                     <strong id="saldoMes">R$ 0,00</strong>
                 </article>
+
+                <article class="card indicador saldo saldo-final">
+                    <span>Após pagar tudo</span>
+                    <strong id="saldoAposPendentes">R$ 0,00</strong>
+                </article>
+            </section>
+
+
+            <section id="cardContasPendentes" class="card bloco-dashboard oculto">
+                <h2>Contas pendentes</h2>
+                <p class="texto-apoio pequeno">Elas só viram despesa quando você marcar como pagas.</p>
+                <div id="listaContasPendentes" class="lista-dashboard vazio">Carregando...</div>
             </section>
 
 
