@@ -46,6 +46,9 @@ const CATEGORIAS_BASE = [
 
 let categoriasPersonalizadas = [];
 
+const DIAS_VENCIMENTO = Array.from({ length: 31 }, (_, index) => String(index + 1));
+const TIPOS_VALOR_CONTA = ["Fixo", "Variável"];
+
 const input = document.getElementById("inputMovimento");
 const botao = document.getElementById("btnContinuar");
 const btnTrocarUsuario = document.getElementById("btnTrocarUsuario");
@@ -233,11 +236,86 @@ function preencherDetalhesExtras(dados) {
     }
 
     if (dados.recorrente) {
+        prepararDadosContaFixa(dados);
+
         confirmDetalhesExtras.classList.remove("oculto");
         confirmDetalhesExtras.innerHTML += `
-            <div><strong>🔁 Conta fixa mensal</strong></div>
-            <div>Será considerada todo mês no resumo.</div>
+            <div class="detalhe-conta-titulo"><strong>🔁 Conta fixa mensal</strong></div>
+            <button class="detalhe-acao" type="button" data-extra-edit="diaVencimento">
+                <span>📅 Vencimento</span>
+                <strong>Dia ${dados.diaVencimento}</strong>
+            </button>
+            <button class="detalhe-acao" type="button" data-extra-edit="tipoValor">
+                <span>💰 Tipo do valor</span>
+                <strong>${dados.tipoValor || "Fixo"}</strong>
+            </button>
+            <button class="detalhe-acao" type="button" data-extra-edit="primeiroVencimento">
+                <span>🗓 Primeiro vencimento</span>
+                <strong>${formatarMesAno(dados.primeiroMes, dados.primeiroAno)}</strong>
+            </button>
         `;
+    }
+}
+
+function prepararDadosContaFixa(dados) {
+    if (!dados.diaVencimento) {
+        dados.diaVencimento = dataHoje.getDate();
+    }
+
+    dados.diaVencimento = Math.min(Math.max(Number(dados.diaVencimento || 1), 1), 31);
+
+    if (!dados.tipoValor) {
+        dados.tipoValor = Number(dados.valor || 0) > 0 ? "Fixo" : "Variável";
+    }
+
+    if (typeof dados.primeiroMes !== "number") {
+        dados.primeiroMes = mesSelecionado;
+    }
+
+    if (typeof dados.primeiroAno !== "number") {
+        dados.primeiroAno = anoSelecionado;
+    }
+}
+
+function editarDetalheContaFixa(campo) {
+    if (!dadosInterpretados || !dadosInterpretados.recorrente) return;
+
+    prepararDadosContaFixa(dadosInterpretados);
+
+    if (campo === "diaVencimento") {
+        abrirModalOpcoes("Dia do vencimento", DIAS_VENCIMENTO, diaSelecionado => {
+            dadosInterpretados.diaVencimento = Number(diaSelecionado);
+            mostrarConfirmacao(dadosInterpretados);
+        }, String(dadosInterpretados.diaVencimento));
+
+        return;
+    }
+
+    if (campo === "tipoValor") {
+        abrirModalOpcoes("Tipo do valor", TIPOS_VALOR_CONTA, tipoSelecionado => {
+            dadosInterpretados.tipoValor = tipoSelecionado;
+            mostrarConfirmacao(dadosInterpretados);
+        }, dadosInterpretados.tipoValor || "Fixo");
+
+        return;
+    }
+
+    if (campo === "primeiroVencimento") {
+        const atual = formatarMesAno(dadosInterpretados.primeiroMes, dadosInterpretados.primeiroAno);
+        const valor = prompt("Primeiro vencimento (MM/AAAA):", atual);
+
+        if (valor === null) return;
+
+        const parsed = interpretarMesAno(valor);
+
+        if (!parsed) {
+            mostrarToast("Mês inválido. Use MM/AAAA.", "erro");
+            return;
+        }
+
+        dadosInterpretados.primeiroMes = parsed.mes;
+        dadosInterpretados.primeiroAno = parsed.ano;
+        mostrarConfirmacao(dadosInterpretados);
     }
 }
 
@@ -546,10 +624,14 @@ function renderizarContasPendentes(contas) {
             ? (Number(conta.ultimoValorPago || 0) > 0 ? `Último: ${formatarMoeda(conta.ultimoValorPago)}` : "Valor variável")
             : formatarMoeda(conta.valorPrevisto || conta.valorPadrao || 0);
 
+        const statusIcone = normalizarTextoComparacao(conta.status) === "atrasado" ? "🔴" : "🟡";
+        const iconeConta = obterIconeConta(conta.descricao, conta.categoria);
+        const textoVencimento = textoVencimentoConta(conta.dia);
+
         div.innerHTML = `
             <div>
-                <span class="principal">${normalizarTextoComparacao(conta.status) === "atrasado" ? "🔴" : "🟡"} ${capitalizar(conta.descricao)}</span>
-                <span class="secundario">Vence dia ${conta.dia || "--"} • ${valorLabel}</span>
+                <span class="principal">${statusIcone} ${iconeConta} ${capitalizar(conta.descricao)}</span>
+                <span class="secundario">${textoVencimento} • ${valorLabel}</span>
             </div>
             <button class="btn-pagar-conta" type="button" data-id-conta="${conta.id}" data-tipo-valor="${conta.tipoValor}" data-valor="${conta.valorPrevisto || conta.valorPadrao || 0}" data-ultimo-valor="${conta.ultimoValorPago || 0}" data-descricao="${capitalizar(conta.descricao)}">Pagar</button>
         `;
@@ -916,6 +998,29 @@ function estaNoMesAtualOuFuturo() {
         (anoSelecionado === dataHoje.getFullYear() && mesSelecionado >= dataHoje.getMonth());
 }
 
+function formatarMesAno(mes, ano) {
+    const mesSeguro = typeof mes === "number" ? mes : dataHoje.getMonth();
+    const anoSeguro = typeof ano === "number" ? ano : dataHoje.getFullYear();
+    return `${String(mesSeguro + 1).padStart(2, "0")}/${anoSeguro}`;
+}
+
+function interpretarMesAno(valor) {
+    const match = String(valor || "").trim().match(/^(\d{1,2})\/(\d{4})$/);
+
+    if (!match) {
+        return null;
+    }
+
+    const mes = Number(match[1]) - 1;
+    const ano = Number(match[2]);
+
+    if (mes < 0 || mes > 11 || ano < 2000) {
+        return null;
+    }
+
+    return { mes, ano };
+}
+
 function obterNomeMes(mes) {
     const meses = [
         "Janeiro",
@@ -1186,6 +1291,35 @@ function obterIconeCategoria(categoria = "", tipo = "") {
     return "🏷";
 }
 
+function obterIconeConta(descricao = "", categoria = "") {
+    const raw = normalizarTextoComparacao(`${descricao} ${categoria}`);
+
+    if (raw.includes("internet")) return "🌐";
+    if (raw.includes("carro") || raw.includes("seguro")) return "🚗";
+    if (raw.includes("luz") || raw.includes("energia")) return "⚡";
+    if (raw.includes("agua")) return "💧";
+    if (raw.includes("condominio")) return "🏢";
+    if (raw.includes("celular") || raw.includes("telefone")) return "📱";
+    if (raw.includes("netflix") || raw.includes("streaming")) return "🎬";
+    if (raw.includes("academia")) return "🏋️";
+    if (raw.includes("casa")) return "🏠";
+
+    return obterIconeCategoria(categoria);
+}
+
+function textoVencimentoConta(dia) {
+    const diaConta = Number(dia || 0);
+
+    if (!diaConta) return "Vencimento não informado";
+
+    if (mesSelecionado === dataHoje.getMonth() && anoSelecionado === dataHoje.getFullYear()) {
+        if (diaConta === dataHoje.getDate()) return "Vence hoje";
+        if (diaConta === dataHoje.getDate() + 1) return "Vence amanhã";
+    }
+
+    return `Vence dia ${diaConta}`;
+}
+
 function obterIconeBeneficio(nome = "") {
     const raw = normalizarTextoComparacao(nome);
 
@@ -1269,6 +1403,14 @@ modalUsuario.querySelectorAll(".btn-opcao-usuario").forEach(botaoUsuario => {
 
 modal.querySelectorAll(".recibo-linha").forEach(linha => {
     linha.addEventListener("click", () => editarCampo(linha.dataset.edit));
+});
+
+modal.addEventListener("click", event => {
+    const botaoDetalhe = event.target.closest(".detalhe-acao");
+
+    if (botaoDetalhe) {
+        editarDetalheContaFixa(botaoDetalhe.dataset.extraEdit);
+    }
 });
 
 iniciarApp();
