@@ -1,7 +1,7 @@
 /*
 ====================================
 Finanças da Família
-Versão: 0.8.2-beta
+Versão: 0.9.0-beta
 Arquivo: app.js
 ====================================
 */
@@ -93,9 +93,13 @@ const btnMesProximo = document.getElementById("btnMesProximo");
 
 const totalReceitas = document.getElementById("totalReceitas");
 const totalDespesas = document.getElementById("totalDespesas");
+const totalPendentes = document.getElementById("totalPendentes");
 const saldoMes = document.getElementById("saldoMes");
+const saldoAposPendentes = document.getElementById("saldoAposPendentes");
 
 const listaCategorias = document.getElementById("listaCategorias");
+const cardContasPendentes = document.getElementById("cardContasPendentes");
+const listaContasPendentes = document.getElementById("listaContasPendentes");
 const cardBeneficios = document.getElementById("cardBeneficios");
 const listaBeneficios = document.getElementById("listaBeneficios");
 const listaParcelas = document.getElementById("listaParcelas");
@@ -284,7 +288,7 @@ async function salvarLancamento() {
 function mensagemSucesso(dados, aprendeuCategoria = false) {
     if (aprendeuCategoria) return "Salvo. Categoria aprendida.";
     if (dados.parcelado) return "Parcelas registradas.";
-    if (dados.recorrente) return "Conta fixa cadastrada.";
+    if (dados.recorrente) return "Conta fixa cadastrada como pendente.";
     return "Lançamento salvo.";
 }
 
@@ -408,6 +412,11 @@ async function carregarDashboard(mostrarMensagem = false) {
     listaCategorias.textContent = "Carregando...";
     listaCategorias.classList.add("vazio");
 
+    if (listaContasPendentes) {
+        listaContasPendentes.textContent = "Carregando...";
+        listaContasPendentes.classList.add("vazio");
+    }
+
     if (listaBeneficios) {
         listaBeneficios.textContent = "Carregando...";
         listaBeneficios.classList.add("vazio");
@@ -461,12 +470,24 @@ function renderizarDashboard(dados) {
     dashboardAno.textContent = String(anoSelecionado);
 
     totalReceitas.textContent = formatarMoeda(dados.receitas || 0);
-    totalDespesas.textContent = formatarMoeda(dados.despesas || 0);
+    totalDespesas.textContent = formatarMoeda(dados.despesasPagas ?? dados.despesas ?? 0);
+
+    if (totalPendentes) {
+        totalPendentes.textContent = formatarMoeda(dados.pendentes || 0);
+    }
+
     saldoMes.textContent = formatarMoeda(dados.saldo || 0);
+
+    if (saldoAposPendentes) {
+        saldoAposPendentes.textContent = formatarMoeda(dados.saldoAposPendentes ?? dados.saldo ?? 0);
+        saldoAposPendentes.parentElement.classList.toggle("positivo", Number(dados.saldoAposPendentes ?? dados.saldo) >= 0);
+        saldoAposPendentes.parentElement.classList.toggle("negativo", Number(dados.saldoAposPendentes ?? dados.saldo) < 0);
+    }
 
     saldoMes.parentElement.classList.toggle("positivo", Number(dados.saldo) >= 0);
     saldoMes.parentElement.classList.toggle("negativo", Number(dados.saldo) < 0);
 
+    renderizarContasPendentes(dados.contasPendentes || []);
     renderizarBeneficios(dados.beneficios || []);
     renderizarCategorias(dados.categorias || []);
     renderizarParcelas(dados.parcelas || []);
@@ -499,6 +520,93 @@ function renderizarCategorias(categorias) {
         `;
         listaCategorias.appendChild(div);
     });
+}
+
+function renderizarContasPendentes(contas) {
+    if (!cardContasPendentes || !listaContasPendentes) return;
+
+    listaContasPendentes.innerHTML = "";
+
+    if (!contas.length) {
+        cardContasPendentes.classList.add("oculto");
+        listaContasPendentes.textContent = "Nenhuma conta fixa pendente neste mês.";
+        listaContasPendentes.classList.add("vazio");
+        return;
+    }
+
+    cardContasPendentes.classList.remove("oculto");
+    listaContasPendentes.classList.remove("vazio");
+
+    contas.forEach(conta => {
+        const div = document.createElement("div");
+        div.className = `item-dashboard item-conta-pendente ${normalizarTextoComparacao(conta.status) === "atrasado" ? "atrasada" : ""}`;
+
+        const ehVariavel = normalizarTextoComparacao(conta.tipoValor).includes("variavel");
+        const valorLabel = ehVariavel
+            ? (Number(conta.ultimoValorPago || 0) > 0 ? `Último: ${formatarMoeda(conta.ultimoValorPago)}` : "Valor variável")
+            : formatarMoeda(conta.valorPrevisto || conta.valorPadrao || 0);
+
+        div.innerHTML = `
+            <div>
+                <span class="principal">${normalizarTextoComparacao(conta.status) === "atrasado" ? "🔴" : "🟡"} ${capitalizar(conta.descricao)}</span>
+                <span class="secundario">Vence dia ${conta.dia || "--"} • ${valorLabel}</span>
+            </div>
+            <button class="btn-pagar-conta" type="button" data-id-conta="${conta.id}" data-tipo-valor="${conta.tipoValor}" data-valor="${conta.valorPrevisto || conta.valorPadrao || 0}" data-ultimo-valor="${conta.ultimoValorPago || 0}" data-descricao="${capitalizar(conta.descricao)}">Pagar</button>
+        `;
+
+        listaContasPendentes.appendChild(div);
+    });
+}
+
+async function pagarContaPendente(botaoPagar) {
+    const idConta = botaoPagar.dataset.idConta || "";
+    const descricao = botaoPagar.dataset.descricao || "esta conta";
+    const tipoValor = botaoPagar.dataset.tipoValor || "Fixo";
+    const ehVariavel = normalizarTextoComparacao(tipoValor).includes("variavel");
+    let valor = Number(botaoPagar.dataset.valor || 0);
+
+    if (ehVariavel) {
+        const ultimoValor = Number(botaoPagar.dataset.ultimoValor || 0);
+        const texto = ultimoValor > 0 ? `Valor pago para ${descricao}:
+
+Último pagamento: ${formatarMoeda(ultimoValor)}` : `Valor pago para ${descricao}:`;
+        const valorDigitado = prompt(texto, ultimoValor > 0 ? String(ultimoValor).replace(".", ",") : "");
+
+        if (valorDigitado === null) return;
+
+        valor = normalizarNumero(valorDigitado);
+
+        if (!valor || valor <= 0) {
+            mostrarToast("Valor inválido.", "erro");
+            return;
+        }
+    } else {
+        const confirmar = confirm(`Marcar "${descricao}" como paga por ${formatarMoeda(valor)}?`);
+        if (!confirmar) return;
+    }
+
+    botaoPagar.disabled = true;
+    mostrarLoading("Registrando pagamento...");
+
+    const resposta = await backendPagarContaFixa({
+        idConta,
+        valor,
+        pessoa: usuarioAtual,
+        mes: mesSelecionado,
+        ano: anoSelecionado
+    });
+
+    ocultarLoading();
+    botaoPagar.disabled = false;
+
+    if (!resposta || !resposta.ok) {
+        mostrarToast("Não consegui marcar a conta como paga.", "erro");
+        return;
+    }
+
+    mostrarToast("Conta paga e lançada no histórico.", "sucesso");
+    carregarDashboard(false);
+    carregarHistorico(false);
 }
 
 function renderizarBeneficios(beneficios) {
@@ -1141,6 +1249,16 @@ if (listaHistorico) {
 
         if (botaoExcluir) {
             excluirLancamentoHistorico(botaoExcluir);
+        }
+    });
+}
+
+if (listaContasPendentes) {
+    listaContasPendentes.addEventListener("click", event => {
+        const botaoPagar = event.target.closest(".btn-pagar-conta");
+
+        if (botaoPagar) {
+            pagarContaPendente(botaoPagar);
         }
     });
 }
