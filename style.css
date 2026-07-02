@@ -1040,3 +1040,66 @@ select:focus {
         max-height: 78vh;
     }
 }
+
+/* ==========================
+   Beta 0.9 — Fluxo de caixa
+========================== */
+.indicador.pendente strong {
+    color: #92400E;
+}
+
+.saldo-final strong {
+    color: var(--verde-texto);
+}
+
+.saldo-final.negativo strong {
+    color: var(--vermelho);
+}
+
+.texto-apoio.pequeno {
+    font-size: 13px;
+    margin: -4px 0 12px;
+}
+
+#cardContasPendentes {
+    border: 1px solid rgba(146, 64, 14, .14);
+}
+
+#cardContasPendentes h2::before {
+    content: "📋 ";
+}
+
+.item-conta-pendente {
+    align-items: center;
+}
+
+.item-conta-pendente.atrasada {
+    background: #FEF2F2;
+    margin: 0 -8px;
+    padding: 10px 8px;
+    border-radius: 16px;
+}
+
+.btn-pagar-conta {
+    flex: 0 0 auto;
+    border-radius: 14px;
+    background: #E8F5E9;
+    color: var(--verde);
+    padding: 10px 12px;
+    font-weight: 800;
+}
+
+.btn-pagar-conta:disabled {
+    opacity: .6;
+}
+
+@media (max-width: 519px) {
+    .btn-pagar-conta {
+        padding: 9px 10px;
+        font-size: 13px;
+    }
+
+    .item-conta-pendente {
+        gap: 10px;
+    }
+}
