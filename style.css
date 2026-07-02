@@ -508,7 +508,7 @@ select:focus {
 }
 
 /* ==========================
-   Beta 0.5.2 — Refinamento visual
+   Beta 0.8.2 — Refinamento visual
 ========================== */
 
 .app-shell {
@@ -943,5 +943,100 @@ select:focus {
         width: 32px;
         height: 32px;
         font-size: 14px;
+    }
+}
+
+
+/* ==========================
+   Beta 0.8.2 — Loading, benefícios e seletores
+========================== */
+
+.loading-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(245, 247, 250, .55);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1200;
+    backdrop-filter: blur(6px);
+}
+
+.loading-card {
+    min-width: 210px;
+    padding: 20px 22px;
+    border-radius: 24px;
+    background: rgba(255, 255, 255, .94);
+    box-shadow: 0 22px 60px rgba(15, 23, 42, .16);
+    display: grid;
+    justify-items: center;
+    gap: 12px;
+    text-align: center;
+}
+
+.spinner {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    border: 4px solid #E5E7EB;
+    border-top-color: var(--verde);
+    animation: girar .8s linear infinite;
+}
+
+@keyframes girar {
+    to { transform: rotate(360deg); }
+}
+
+.modal-opcoes-card {
+    max-width: 390px;
+}
+
+.lista-opcoes {
+    display: grid;
+    gap: 8px;
+    margin-top: 12px;
+}
+
+.btn-opcao-lista {
+    width: 100%;
+    min-height: 48px;
+    padding: 12px 14px;
+    border-radius: 16px;
+    background: #F9FAFB;
+    color: var(--texto);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    text-align: left;
+    font-weight: 750;
+}
+
+.btn-opcao-lista strong {
+    color: var(--verde);
+}
+
+.btn-opcao-lista.nova {
+    background: #E8F5E9;
+    color: var(--verde);
+}
+
+#cardBeneficios {
+    border: 1px solid rgba(46, 125, 50, .12);
+}
+
+#cardBeneficios h2::before {
+    content: "🎁 ";
+}
+
+@media (max-width: 519px) {
+    .loading-card {
+        width: calc(100% - 72px);
+    }
+
+    .modal-opcoes-card {
+        align-self: flex-end;
+        border-bottom-left-radius: 0;
+        border-bottom-right-radius: 0;
+        max-height: 78vh;
     }
 }
