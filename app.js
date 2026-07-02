@@ -1,7 +1,7 @@
 /*
 ====================================
 Finanças da Família
-Versão: 0.8.0-beta
+Versão: 0.8.2-beta
 Arquivo: app.js
 ====================================
 */
@@ -16,6 +16,35 @@ const PLACEHOLDERS = [
 ];
 
 const LIMITE_HISTORICO = 15;
+
+const TIPOS_LANCAMENTO = ["Despesa", "Receita"];
+
+const PAGAMENTOS_BASE = [
+    "Pix",
+    "Cartão de crédito",
+    "Cartão de débito",
+    "Dinheiro",
+    "Vale alimentação",
+    "Vale combustível",
+    "Vale transporte",
+    "Não informado"
+];
+
+const CATEGORIAS_BASE = [
+    "Mercado",
+    "Alimentação",
+    "Combustível",
+    "Carro",
+    "Casa",
+    "Saúde",
+    "Eletrônicos",
+    "Lazer",
+    "Benefícios",
+    "Recebimento",
+    "Outros"
+];
+
+let categoriasPersonalizadas = [];
 
 const input = document.getElementById("inputMovimento");
 const botao = document.getElementById("btnContinuar");
@@ -46,6 +75,14 @@ const confirmDetalhesExtras = document.getElementById("confirmDetalhesExtras");
 const iconeDescricao = document.getElementById("iconeDescricao");
 const iconeCategoria = document.getElementById("iconeCategoria");
 
+const modalOpcoes = document.getElementById("modalOpcoes");
+const modalOpcoesTitulo = document.getElementById("modalOpcoesTitulo");
+const modalOpcoesLista = document.getElementById("modalOpcoesLista");
+const btnFecharOpcoes = document.getElementById("btnFecharOpcoes");
+
+const loadingOverlay = document.getElementById("loadingOverlay");
+const loadingMensagem = document.getElementById("loadingMensagem");
+
 const toast = document.getElementById("toast");
 const toastMensagem = document.getElementById("toastMensagem");
 
@@ -59,6 +96,8 @@ const totalDespesas = document.getElementById("totalDespesas");
 const saldoMes = document.getElementById("saldoMes");
 
 const listaCategorias = document.getElementById("listaCategorias");
+const cardBeneficios = document.getElementById("cardBeneficios");
+const listaBeneficios = document.getElementById("listaBeneficios");
 const listaParcelas = document.getElementById("listaParcelas");
 const listaUltimos = document.getElementById("listaUltimos");
 
@@ -133,9 +172,11 @@ async function continuar() {
     }
 
     setBotaoCarregando(botao, "Interpretando...");
+    mostrarLoading("Interpretando lançamento...");
 
     const resposta = await backendInterpretar(texto, usuarioAtual);
 
+    ocultarLoading();
     restaurarBotao(botao, "Continuar");
 
     if (!resposta || !resposta.ok) {
@@ -208,6 +249,7 @@ async function salvarLancamento() {
     }
 
     setBotaoCarregando(btnConfirmar, "Salvando...");
+    mostrarLoading("Salvando lançamento...");
     btnEditar.disabled = true;
 
     const resposta = await backendSalvar({
@@ -218,12 +260,14 @@ async function salvarLancamento() {
     btnEditar.disabled = false;
 
     if (!resposta || !resposta.ok) {
+        ocultarLoading();
         restaurarBotao(btnConfirmar, "Salvar");
         mostrarToast("Não consegui salvar o lançamento.", "erro");
         return;
     }
 
     const aprendeuCategoria = await aprenderCategoriaSeNecessario();
+    ocultarLoading();
     mostrarToast(mensagemSucesso(dadosInterpretados, aprendeuCategoria), "sucesso");
 
     setTimeout(() => {
@@ -273,32 +317,59 @@ function editarCampo(campo) {
     if (!dadosInterpretados) return;
 
     const atual = dadosInterpretados[campo] || "";
-    let novoValor = null;
 
     if (campo === "tipo") {
-        novoValor = prompt("Tipo (Despesa ou Receita):", dadosInterpretados.tipo || "Despesa");
+        abrirModalOpcoes("Tipo de lançamento", TIPOS_LANCAMENTO, tipoSelecionado => {
+            const tipoNormalizado = normalizarTipo(tipoSelecionado);
 
-        if (novoValor === null) return;
+            if (!tipoNormalizado) {
+                mostrarToast("Tipo inválido.", "erro");
+                return;
+            }
 
-        const tipoNormalizado = normalizarTipo(novoValor);
+            dadosInterpretados.tipo = tipoNormalizado;
 
-        if (!tipoNormalizado) {
-            mostrarToast("Tipo inválido.", "erro");
-            return;
-        }
+            if (tipoNormalizado === "Receita" && (!dadosInterpretados.categoria || dadosInterpretados.categoria === "Outros")) {
+                dadosInterpretados.categoria = "Recebimento";
+            }
 
-        dadosInterpretados.tipo = tipoNormalizado;
+            if (tipoNormalizado === "Despesa" && dadosInterpretados.categoria === "Recebimento") {
+                dadosInterpretados.categoria = "Outros";
+            }
 
-        if (tipoNormalizado === "Receita" && (!dadosInterpretados.categoria || dadosInterpretados.categoria === "Outros")) {
-            dadosInterpretados.categoria = "Recebimento";
-        }
+            mostrarConfirmacao(dadosInterpretados);
+        }, atual);
 
-        if (tipoNormalizado === "Despesa" && dadosInterpretados.categoria === "Recebimento") {
-            dadosInterpretados.categoria = "Outros";
-        }
-    } else if (campo === "valor") {
+        return;
+    }
+
+    if (campo === "pagamento") {
+        abrirModalOpcoes("Forma de pagamento", PAGAMENTOS_BASE, pagamentoSelecionado => {
+            dadosInterpretados.pagamento = normalizarPagamento(pagamentoSelecionado);
+            mostrarConfirmacao(dadosInterpretados);
+        }, atual);
+
+        return;
+    }
+
+    if (campo === "categoria") {
+        abrirModalOpcoes("Categoria", obterCategoriasDisponiveis(), categoriaSelecionada => {
+            if (categoriaSelecionada === "__nova__") {
+                criarNovaCategoria();
+                return;
+            }
+
+            dadosInterpretados.categoria = capitalizar(categoriaSelecionada.trim() || "Outros");
+            mostrarConfirmacao(dadosInterpretados);
+        }, atual, true);
+
+        return;
+    }
+
+    if (campo === "valor") {
         const valorBase = dadosInterpretados.valor || dadosInterpretados.valorParcela || dadosInterpretados.valorTotal || 0;
-        novoValor = prompt("Novo valor:", String(valorBase).replace(".", ","));
+        const novoValor = prompt("Novo valor:", String(valorBase).replace(".", ","));
+
         if (novoValor === null) return;
 
         const numero = normalizarNumero(novoValor);
@@ -315,28 +386,32 @@ function editarCampo(campo) {
         } else {
             dadosInterpretados.valor = numero;
         }
-    } else if (campo === "pagamento") {
-        novoValor = prompt("Pagamento (Pix, Cartão de crédito, Cartão de débito, Dinheiro, VA, VC, VT):", atual);
-        if (novoValor === null) return;
-        dadosInterpretados.pagamento = normalizarPagamento(novoValor);
-    } else if (campo === "categoria") {
-        novoValor = prompt("Categoria:", atual);
-        if (novoValor === null) return;
-        dadosInterpretados.categoria = capitalizar(novoValor.trim() || "Outros");
-    } else if (campo === "descricao") {
-        novoValor = prompt("Descrição:", atual);
-        if (novoValor === null) return;
-        dadosInterpretados.descricao = novoValor.trim() || "Sem descrição";
+
+        mostrarConfirmacao(dadosInterpretados);
+        return;
     }
 
-    mostrarConfirmacao(dadosInterpretados);
+    if (campo === "descricao") {
+        const novoValor = prompt("Descrição:", atual);
+
+        if (novoValor === null) return;
+
+        dadosInterpretados.descricao = novoValor.trim() || "Sem descrição";
+        mostrarConfirmacao(dadosInterpretados);
+    }
 }
 
 async function carregarDashboard(mostrarMensagem = false) {
     atualizarSeletorMes();
+    mostrarLoading("Atualizando resumo...");
 
     listaCategorias.textContent = "Carregando...";
     listaCategorias.classList.add("vazio");
+
+    if (listaBeneficios) {
+        listaBeneficios.textContent = "Carregando...";
+        listaBeneficios.classList.add("vazio");
+    }
 
     if (listaParcelas) {
         listaParcelas.textContent = "Carregando...";
@@ -351,6 +426,7 @@ async function carregarDashboard(mostrarMensagem = false) {
     const resposta = await backendDashboard(mesSelecionado, anoSelecionado);
 
     if (!resposta || !resposta.ok) {
+        ocultarLoading();
         listaCategorias.textContent = "Não consegui carregar o resumo.";
 
         if (listaParcelas) {
@@ -367,6 +443,7 @@ async function carregarDashboard(mostrarMensagem = false) {
 
     renderizarDashboard(resposta.dados);
     atualizarSeletorMes();
+    ocultarLoading();
 
     if (mostrarMensagem) mostrarToast("Resumo atualizado.", "sucesso");
 }
@@ -390,6 +467,7 @@ function renderizarDashboard(dados) {
     saldoMes.parentElement.classList.toggle("positivo", Number(dados.saldo) >= 0);
     saldoMes.parentElement.classList.toggle("negativo", Number(dados.saldo) < 0);
 
+    renderizarBeneficios(dados.beneficios || []);
     renderizarCategorias(dados.categorias || []);
     renderizarParcelas(dados.parcelas || []);
 
@@ -420,6 +498,35 @@ function renderizarCategorias(categorias) {
             <span class="valor negativo">${formatarMoeda(item.total)}</span>
         `;
         listaCategorias.appendChild(div);
+    });
+}
+
+function renderizarBeneficios(beneficios) {
+    if (!cardBeneficios || !listaBeneficios) return;
+
+    listaBeneficios.innerHTML = "";
+
+    if (!beneficios.length) {
+        cardBeneficios.classList.add("oculto");
+        listaBeneficios.textContent = "Nenhum benefício recebido neste mês.";
+        listaBeneficios.classList.add("vazio");
+        return;
+    }
+
+    cardBeneficios.classList.remove("oculto");
+    listaBeneficios.classList.remove("vazio");
+
+    beneficios.forEach(item => {
+        const div = document.createElement("div");
+        div.className = "item-dashboard";
+        div.innerHTML = `
+            <div>
+                <span class="principal">${obterIconeBeneficio(item.nome)} ${item.nome}</span>
+                <span class="secundario">${item.quantidade || 1} lançamento(s) de saldo</span>
+            </div>
+            <span class="valor positivo">${formatarMoeda(item.total)}</span>
+        `;
+        listaBeneficios.appendChild(div);
     });
 }
 
@@ -481,6 +588,8 @@ function renderizarUltimos(ultimos) {
 async function carregarHistorico(mostrarMensagem = false) {
     if (!listaHistorico) return;
 
+    mostrarLoading("Carregando histórico...");
+
     atualizarCabecalhoHistorico();
 
     listaHistorico.textContent = "Carregando...";
@@ -494,12 +603,14 @@ async function carregarHistorico(mostrarMensagem = false) {
     );
 
     if (!resposta || !resposta.ok) {
+        ocultarLoading();
         listaHistorico.textContent = "Não consegui carregar o histórico.";
         if (mostrarMensagem) mostrarToast("Erro ao carregar histórico.", "erro");
         return;
     }
 
     renderizarHistorico(resposta.dados);
+    ocultarLoading();
 
     if (mostrarMensagem) mostrarToast("Histórico atualizado.", "sucesso");
 }
@@ -586,6 +697,7 @@ async function excluirLancamentoHistorico(botaoExcluir) {
     }
 
     botaoExcluir.disabled = true;
+    mostrarLoading("Excluindo lançamento...");
 
     const resposta = await backendExcluirLancamento({
         modo,
@@ -594,11 +706,13 @@ async function excluirLancamentoHistorico(botaoExcluir) {
     });
 
     if (!resposta || !resposta.ok) {
+        ocultarLoading();
         botaoExcluir.disabled = false;
         mostrarToast("Não consegui excluir o lançamento.", "erro");
         return;
     }
 
+    ocultarLoading();
     mostrarToast("Lançamento excluído.", "sucesso");
 
     carregarDashboard(false);
@@ -741,6 +855,121 @@ function trocarTela(tela) {
     }
 }
 
+function abrirModalOpcoes(titulo, opcoes, aoSelecionar, valorAtual = "", incluirNovaCategoria = false) {
+    if (!modalOpcoes || !modalOpcoesLista || !modalOpcoesTitulo) return;
+
+    modalOpcoesTitulo.textContent = titulo;
+    modalOpcoesLista.innerHTML = "";
+
+    const opcoesUnicas = [...new Set(opcoes.filter(Boolean))];
+
+    opcoesUnicas.forEach(opcao => {
+        const botaoOpcao = document.createElement("button");
+        botaoOpcao.type = "button";
+        botaoOpcao.className = "btn-opcao-lista";
+        botaoOpcao.innerHTML = `
+            <span>${obterIconeOpcao(titulo, opcao)} ${opcao}</span>
+            ${normalizarTextoComparacao(opcao) === normalizarTextoComparacao(valorAtual) ? "<strong>✓</strong>" : ""}
+        `;
+
+        botaoOpcao.addEventListener("click", () => {
+            fecharModalOpcoes();
+            aoSelecionar(opcao);
+        });
+
+        modalOpcoesLista.appendChild(botaoOpcao);
+    });
+
+    if (incluirNovaCategoria) {
+        const botaoNova = document.createElement("button");
+        botaoNova.type = "button";
+        botaoNova.className = "btn-opcao-lista nova";
+        botaoNova.innerHTML = "<span>➕ Nova categoria</span>";
+
+        botaoNova.addEventListener("click", () => {
+            fecharModalOpcoes();
+            aoSelecionar("__nova__");
+        });
+
+        modalOpcoesLista.appendChild(botaoNova);
+    }
+
+    modalOpcoes.classList.remove("oculto");
+}
+
+function fecharModalOpcoes() {
+    if (modalOpcoes) {
+        modalOpcoes.classList.add("oculto");
+    }
+}
+
+function criarNovaCategoria() {
+    const novaCategoria = prompt("Nome da nova categoria:");
+
+    if (novaCategoria === null) return;
+
+    const categoria = capitalizar(novaCategoria.trim());
+
+    if (!categoria) {
+        mostrarToast("Categoria inválida.", "erro");
+        return;
+    }
+
+    if (!categoriasPersonalizadas.includes(categoria) && !CATEGORIAS_BASE.includes(categoria)) {
+        categoriasPersonalizadas.push(categoria);
+    }
+
+    dadosInterpretados.categoria = categoria;
+    mostrarConfirmacao(dadosInterpretados);
+    mostrarToast("Categoria adicionada.", "sucesso");
+}
+
+function obterCategoriasDisponiveis() {
+    const categoriaAtual = dadosInterpretados && dadosInterpretados.categoria ? dadosInterpretados.categoria : "";
+    return [...new Set([...CATEGORIAS_BASE, ...categoriasPersonalizadas, categoriaAtual].filter(Boolean))];
+}
+
+function obterIconeOpcao(titulo, opcao) {
+    const tituloNormalizado = normalizarTextoComparacao(titulo);
+
+    if (tituloNormalizado.includes("tipo")) {
+        return opcao === "Receita" ? "💵" : "🔴";
+    }
+
+    if (tituloNormalizado.includes("pagamento")) {
+        return obterIconePagamento(opcao);
+    }
+
+    return obterIconeCategoria(opcao);
+}
+
+function obterIconePagamento(pagamento = "") {
+    const raw = normalizarTextoComparacao(pagamento);
+
+    if (raw.includes("pix")) return "⚡";
+    if (raw.includes("credito")) return "💳";
+    if (raw.includes("debito")) return "💳";
+    if (raw.includes("dinheiro")) return "💵";
+    if (raw.includes("alimentacao")) return "🥗";
+    if (raw.includes("combustivel")) return "⛽";
+    if (raw.includes("transporte")) return "🚌";
+
+    return "💳";
+}
+
+function mostrarLoading(mensagem = "Carregando...") {
+    if (!loadingOverlay || !loadingMensagem) return;
+
+    loadingMensagem.textContent = mensagem;
+    loadingOverlay.classList.remove("oculto");
+}
+
+function ocultarLoading() {
+    if (loadingOverlay) {
+        loadingOverlay.classList.add("oculto");
+    }
+}
+
 function mostrarToast(mensagem, tipo = "sucesso") {
     toastMensagem.textContent = mensagem;
     toast.className = "toast";
@@ -843,9 +1072,20 @@ function obterIconeCategoria(categoria = "", tipo = "") {
     if (raw.includes("casa")) return "🏠";
     if (raw.includes("lazer")) return "🎮";
     if (raw.includes("eletronico")) return "💻";
+    if (raw.includes("beneficio")) return "🎁";
     if (raw.includes("recebimento")) return "💵";
 
     return "🏷";
+}
+
+function obterIconeBeneficio(nome = "") {
+    const raw = normalizarTextoComparacao(nome);
+
+    if (raw.includes("alimentacao")) return "🥗";
+    if (raw.includes("combustivel")) return "⛽";
+    if (raw.includes("transporte")) return "🚌";
+
+    return "🎁";
 }
 
 function iniciarPlaceholders() {
@@ -889,6 +1129,10 @@ navDashboard.addEventListener("click", () => trocarTela("dashboard"));
 
 if (navHistorico) {
     navHistorico.addEventListener("click", () => trocarTela("historico"));
+}
+
+if (btnFecharOpcoes) {
+    btnFecharOpcoes.addEventListener("click", fecharModalOpcoes);
 }
 
 if (listaHistorico) {
