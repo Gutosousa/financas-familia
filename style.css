@@ -1164,3 +1164,30 @@ select:focus {
 .item-parcela .secundario {
     line-height: 1.35;
 }
+
+
+.cartao-total {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 16px;
+    margin: 14px 0 8px;
+    padding: 16px;
+    border-radius: 18px;
+    background: #F9FAFB;
+}
+
+.cartao-total span {
+    color: var(--cinza);
+    font-size: 14px;
+    font-weight: 700;
+}
+
+.cartao-total strong {
+    font-size: 22px;
+    color: var(--texto);
+}
+
+.item-cartao .principal {
+    color: var(--texto);
+}
