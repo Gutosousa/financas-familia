@@ -56,6 +56,13 @@ async function backendPagarContaFixa(dados) {
     });
 }
 
+async function backendEditarLancamento(dados) {
+    return backendRequest({
+        acao: "editarLancamento",
+        ...dados
+    });
+}
+
 async function backendExcluirLancamento(dados) {
     return backendRequest({
         acao: "excluirLancamento",
