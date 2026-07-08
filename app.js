@@ -1,12 +1,13 @@
 /*
 ====================================
 Finanças da Família
-Versão: 0.9.0-beta
+Versão: 0.9.5-beta
 Arquivo: app.js
 ====================================
 */
 
 const STORAGE_USUARIO = "financas_usuario";
+const STORAGE_CATEGORIAS_CONFIG = "financas_categorias_config";
 
 const PLACEHOLDERS = [
     "Ex.: giassi 40 cc",
@@ -15,7 +16,7 @@ const PLACEHOLDERS = [
     "Ex.: salário 5300 pix"
 ];
 
-const LIMITE_HISTORICO = 15;
+const LIMITE_HISTORICO = 200;
 
 const TIPOS_LANCAMENTO = ["Despesa", "Receita"];
 
@@ -44,7 +45,28 @@ const CATEGORIAS_BASE = [
     "Outros"
 ];
 
+const EMOJIS_CATEGORIAS_PADRAO = {
+    "Mercado": "🛒",
+    "Alimentação": "🍔",
+    "Combustível": "⛽",
+    "Carro": "🚗",
+    "Casa": "🏠",
+    "Saúde": "💊",
+    "Eletrônicos": "💻",
+    "Lazer": "🎮",
+    "Benefícios": "🎁",
+    "Recebimento": "💵",
+    "Outros": "🏷"
+};
+
+const EMOJIS_DISPONIVEIS = [
+    "🛒", "🍔", "🍕", "🥩", "🥗", "☕", "⛽", "🚗", "🏍️", "🚌",
+    "🏠", "⚡", "💧", "🌐", "📱", "💻", "🎮", "🎬", "💊", "🐶",
+    "👶", "🎓", "💼", "✈️", "🎁", "💵", "🏋️", "🛠️", "❤️", "🏷"
+];
+
 let categoriasPersonalizadas = [];
+let categoriasConfig = carregarCategoriasConfig();
 
 const DIAS_VENCIMENTO = Array.from({ length: 31 }, (_, index) => String(index + 1));
 const TIPOS_VALOR_CONTA = ["Fixo", "Variável"];
@@ -56,10 +78,12 @@ const btnTrocarUsuario = document.getElementById("btnTrocarUsuario");
 const telaRegistro = document.getElementById("telaRegistro");
 const telaDashboard = document.getElementById("telaDashboard");
 const telaHistorico = document.getElementById("telaHistorico");
+const telaConfiguracoes = document.getElementById("telaConfiguracoes");
 
 const navRegistro = document.getElementById("navRegistro");
 const navDashboard = document.getElementById("navDashboard");
 const navHistorico = document.getElementById("navHistorico");
+const navConfiguracoes = document.getElementById("navConfiguracoes");
 
 const btnAtualizarDashboard = document.getElementById("btnAtualizarDashboard");
 
@@ -131,6 +155,9 @@ const btnHistoricoAnterior = document.getElementById("btnHistoricoAnterior");
 const btnHistoricoProximo = document.getElementById("btnHistoricoProximo");
 const historicoPaginaInfo = document.getElementById("historicoPaginaInfo");
 
+const listaCategoriasConfig = document.getElementById("listaCategoriasConfig");
+const btnNovaCategoriaConfig = document.getElementById("btnNovaCategoriaConfig");
+
 let dadosInterpretados = null;
 let toastTimer = null;
 let usuarioAtual = localStorage.getItem(STORAGE_USUARIO) || "";
@@ -149,6 +176,96 @@ let detalhesParcelas = [];
 let itensHistoricoAtuais = [];
 let filtroHistoricoAtual = "todos";
 let buscaHistoricoAtual = "";
+
+
+function carregarCategoriasConfig() {
+    try {
+        const salvo = JSON.parse(localStorage.getItem(STORAGE_CATEGORIAS_CONFIG) || "{}");
+        return {
+            ...EMOJIS_CATEGORIAS_PADRAO,
+            ...salvo
+        };
+    } catch (erro) {
+        return { ...EMOJIS_CATEGORIAS_PADRAO };
+    }
+}
+
+function salvarCategoriasConfig() {
+    localStorage.setItem(STORAGE_CATEGORIAS_CONFIG, JSON.stringify(categoriasConfig));
+}
+
+function obterTodasCategoriasConfig() {
+    return [...new Set([
+        ...CATEGORIAS_BASE,
+        ...categoriasPersonalizadas,
+        ...Object.keys(categoriasConfig || {})
+    ].filter(Boolean))];
+}
+
+function renderizarConfiguracoes() {
+    renderizarCategoriasConfig();
+}
+
+function renderizarCategoriasConfig() {
+    if (!listaCategoriasConfig) return;
+
+    listaCategoriasConfig.innerHTML = "";
+
+    obterTodasCategoriasConfig().forEach(categoria => {
+        const botao = document.createElement("button");
+        botao.type = "button";
+        botao.className = "config-linha categoria-config";
+        botao.dataset.categoria = categoria;
+        botao.innerHTML = `
+            <span>${obterIconeCategoria(categoria)} ${categoria}</span>
+            <small>Trocar emoji ›</small>
+        `;
+        listaCategoriasConfig.appendChild(botao);
+    });
+}
+
+function trocarEmojiCategoria(categoria) {
+    abrirModalOpcoes(`Emoji para ${categoria}`, EMOJIS_DISPONIVEIS, emojiSelecionado => {
+        categoriasConfig[categoria] = emojiSelecionado;
+        salvarCategoriasConfig();
+        renderizarCategoriasConfig();
+        renderizarDashboardCache();
+        renderizarHistoricoFiltrado();
+        mostrarToast("Emoji atualizado.", "sucesso");
+    }, categoriasConfig[categoria] || obterIconeCategoria(categoria));
+}
+
+function criarCategoriaConfiguracao() {
+    const nome = prompt("Nome da nova categoria:");
+
+    if (nome === null) return;
+
+    const categoria = capitalizar(nome.trim());
+
+    if (!categoria) {
+        mostrarToast("Categoria inválida.", "erro");
+        return;
+    }
+
+    if (!categoriasPersonalizadas.includes(categoria) && !CATEGORIAS_BASE.includes(categoria)) {
+        categoriasPersonalizadas.push(categoria);
+    }
+
+    abrirModalOpcoes(`Emoji para ${categoria}`, EMOJIS_DISPONIVEIS, emojiSelecionado => {
+        categoriasConfig[categoria] = emojiSelecionado;
+        salvarCategoriasConfig();
+        renderizarCategoriasConfig();
+        mostrarToast("Categoria criada.", "sucesso");
+    }, "🏷");
+}
+
+function renderizarDashboardCache() {
+    // Re-render leve apenas para atualizar ícones quando possível.
+    if (itensHistoricoAtuais && itensHistoricoAtuais.length) {
+        renderizarHistoricoFiltrado();
+    }
+}
+
 
 function iniciarApp() {
     atualizarUsuarioNaTela();
@@ -905,8 +1022,8 @@ function renderizarHistoricoFiltrado() {
             const pagamento = normalizarTextoComparacao(item.pagamento);
             const tipoRegistro = normalizarTextoComparacao(item.tipoRegistro);
 
-            if (filtroHistoricoAtual === "receitas") return tipo === "receita";
-            if (filtroHistoricoAtual === "despesas") return tipo === "despesa";
+            if (filtroHistoricoAtual === "receitas") return tipo.includes("receita") || normalizarTextoComparacao(item.categoria).includes("recebimento");
+            if (filtroHistoricoAtual === "despesas") return tipo.includes("despesa");
             if (filtroHistoricoAtual === "cartao") return pagamento.includes("credito");
             if (filtroHistoricoAtual === "parcelas") return tipoRegistro === "parcela";
             if (filtroHistoricoAtual === "contas") return tipoRegistro.includes("conta fixa");
@@ -1313,6 +1430,7 @@ function obterNomeMes(mes) {
 function trocarTela(tela) {
     const dashboardAtivo = tela === "dashboard";
     const historicoAtivo = tela === "historico";
+    const configuracoesAtivo = tela === "configuracoes";
     const registroAtivo = tela === "registro";
 
     telaRegistro.classList.toggle("ativa", registroAtivo);
@@ -1322,6 +1440,10 @@ function trocarTela(tela) {
         telaHistorico.classList.toggle("ativa", historicoAtivo);
     }
 
+    if (telaConfiguracoes) {
+        telaConfiguracoes.classList.toggle("ativa", configuracoesAtivo);
+    }
+
     navRegistro.classList.toggle("ativo", registroAtivo);
     navDashboard.classList.toggle("ativo", dashboardAtivo);
 
@@ -1329,10 +1451,16 @@ function trocarTela(tela) {
         navHistorico.classList.toggle("ativo", historicoAtivo);
     }
 
+    if (navConfiguracoes) {
+        navConfiguracoes.classList.toggle("ativo", configuracoesAtivo);
+    }
+
     if (dashboardAtivo) {
         carregarDashboard();
     } else if (historicoAtivo) {
         carregarHistorico();
+    } else if (configuracoesAtivo) {
+        renderizarConfiguracoes();
     } else {
         setTimeout(() => input.focus(), 80);
     }
@@ -1418,7 +1546,7 @@ function criarNovaCategoria() {
 
 function obterCategoriasDisponiveis() {
     const categoriaAtual = dadosInterpretados && dadosInterpretados.categoria ? dadosInterpretados.categoria : "";
-    return [...new Set([...CATEGORIAS_BASE, ...categoriasPersonalizadas, categoriaAtual].filter(Boolean))];
+    return [...new Set([...obterTodasCategoriasConfig(), categoriaAtual].filter(Boolean))];
 }
 
 function obterIconeOpcao(titulo, opcao) {
@@ -1554,20 +1682,34 @@ function removerAcentos(texto) {
 function obterIconeCategoria(categoria = "", tipo = "") {
     if (tipo === "Receita") return "💵";
 
-    const raw = removerAcentos(categoria.toLowerCase());
+    const nomeCategoria = capitalizar(String(categoria || "").trim());
 
-    if (raw.includes("mercado")) return "🛒";
-    if (raw.includes("alimentacao") || raw.includes("restaurante")) return "🍔";
-    if (raw.includes("carro") || raw.includes("veiculo") || raw.includes("veículo")) return "🚗";
-    if (raw.includes("combustivel")) return "⛽";
-    if (raw.includes("saude")) return "💊";
-    if (raw.includes("casa")) return "🏠";
-    if (raw.includes("lazer")) return "🎮";
-    if (raw.includes("eletronico")) return "💻";
-    if (raw.includes("beneficio")) return "🎁";
-    if (raw.includes("recebimento")) return "💵";
+    if (categoriasConfig && categoriasConfig[nomeCategoria]) {
+        return categoriasConfig[nomeCategoria];
+    }
 
-    return "🏷";
+    const raw = removerAcentos(String(categoria || "").toLowerCase());
+
+    const categoriaPadrao = Object.keys(categoriasConfig || {}).find(nome => {
+        return removerAcentos(nome.toLowerCase()) === raw;
+    });
+
+    if (categoriaPadrao) {
+        return categoriasConfig[categoriaPadrao];
+    }
+
+    if (raw.includes("mercado")) return categoriasConfig["Mercado"] || "🛒";
+    if (raw.includes("alimentacao") || raw.includes("restaurante")) return categoriasConfig["Alimentação"] || "🍔";
+    if (raw.includes("carro") || raw.includes("veiculo")) return categoriasConfig["Carro"] || "🚗";
+    if (raw.includes("combustivel")) return categoriasConfig["Combustível"] || "⛽";
+    if (raw.includes("saude")) return categoriasConfig["Saúde"] || "💊";
+    if (raw.includes("casa")) return categoriasConfig["Casa"] || "🏠";
+    if (raw.includes("lazer")) return categoriasConfig["Lazer"] || "🎮";
+    if (raw.includes("eletronico")) return categoriasConfig["Eletrônicos"] || "💻";
+    if (raw.includes("beneficio")) return categoriasConfig["Benefícios"] || "🎁";
+    if (raw.includes("recebimento")) return categoriasConfig["Recebimento"] || "💵";
+
+    return categoriasConfig["Outros"] || "🏷";
 }
 
 function obterIconeConta(descricao = "", categoria = "") {
@@ -1804,6 +1946,24 @@ navDashboard.addEventListener("click", () => trocarTela("dashboard"));
 if (navHistorico) {
     navHistorico.addEventListener("click", () => trocarTela("historico"));
 }
+
+
+if (navConfiguracoes) {
+    navConfiguracoes.addEventListener("click", () => trocarTela("configuracoes"));
+}
+
+if (listaCategoriasConfig) {
+    listaCategoriasConfig.addEventListener("click", event => {
+        const botao = event.target.closest(".categoria-config");
+        if (!botao) return;
+        trocarEmojiCategoria(botao.dataset.categoria);
+    });
+}
+
+if (btnNovaCategoriaConfig) {
+    btnNovaCategoriaConfig.addEventListener("click", criarCategoriaConfiguracao);
+}
+
 
 if (btnFecharOpcoes) {
     btnFecharOpcoes.addEventListener("click", fecharModalOpcoes);
