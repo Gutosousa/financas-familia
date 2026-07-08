@@ -790,9 +790,10 @@ function renderizarCartaoCredito(cartao) {
 }
 
 function renderizarParcelas(parcelas) {
-    if (!listaParcelas) return;
 
-    listaParcelas.innerHTML = "";
+    console.log("PARCELAS RECEBIDAS:", parcelas);
+
+    if (!listaParcelas) return;
 
     if (!parcelas.length) {
         listaParcelas.textContent = "Nenhuma compra parcelada neste mês.";
