@@ -108,8 +108,21 @@ const listaBeneficios = document.getElementById("listaBeneficios");
 const cardCartaoCredito = document.getElementById("cardCartaoCredito");
 const totalCartaoCredito = document.getElementById("totalCartaoCredito");
 const listaCartaoCredito = document.getElementById("listaCartaoCredito");
+const btnDetalhesCartao = document.getElementById("btnDetalhesCartao");
 const listaParcelas = document.getElementById("listaParcelas");
+const btnDetalhesParcelas = document.getElementById("btnDetalhesParcelas");
+const totalParcelasMes = document.getElementById("totalParcelasMes");
+const parcelasResumoTitulo = document.getElementById("parcelasResumoTitulo");
 const listaUltimos = document.getElementById("listaUltimos");
+
+const modalDetalhes = document.getElementById("modalDetalhes");
+const modalDetalhesTitulo = document.getElementById("modalDetalhesTitulo");
+const modalDetalhesSubtitulo = document.getElementById("modalDetalhesSubtitulo");
+const modalDetalhesConteudo = document.getElementById("modalDetalhesConteudo");
+const btnFecharDetalhes = document.getElementById("btnFecharDetalhes");
+
+const buscaHistorico = document.getElementById("buscaHistorico");
+const botoesFiltroHistorico = document.querySelectorAll(".filtro-historico");
 
 const historicoMesNome = document.getElementById("historicoMesNome");
 const historicoAno = document.getElementById("historicoAno");
@@ -131,6 +144,11 @@ let anoSelecionado = dataHoje.getFullYear();
 
 let paginaHistorico = 1;
 let totalPaginasHistorico = 1;
+let detalhesCartaoCredito = [];
+let detalhesParcelas = [];
+let itensHistoricoAtuais = [];
+let filtroHistoricoAtual = "todos";
+let buscaHistoricoAtual = "";
 
 function iniciarApp() {
     atualizarUsuarioNaTela();
@@ -756,6 +774,7 @@ function renderizarCartaoCredito(cartao) {
     const itens = cartao && Array.isArray(cartao.itens) ? cartao.itens : [];
     const total = cartao ? Number(cartao.total || 0) : 0;
 
+    detalhesCartaoCredito = itens;
     listaCartaoCredito.innerHTML = "";
     totalCartaoCredito.textContent = formatarMoeda(total);
 
@@ -768,59 +787,41 @@ function renderizarCartaoCredito(cartao) {
 
     cardCartaoCredito.classList.remove("oculto");
     listaCartaoCredito.classList.remove("vazio");
-
-    itens.forEach(item => {
-        const div = document.createElement("div");
-        div.className = "item-dashboard item-cartao";
-
-        const detalheParcela = item.parcela ? `${formatarParcela(item.parcela, item.totalParcelas)} • ` : "";
-        const detalheData = formatarDataCurta(item.data) || formatarMesAno(item.data);
-        const detalheCategoria = item.categoria || "Outros";
-
-        div.innerHTML = `
-            <div>
-                <span class="principal">💳 ${capitalizar(item.descricao)}</span>
-                <span class="secundario">${detalheParcela}${detalheData} • ${detalheCategoria}</span>
-            </div>
-            <span class="valor negativo">${formatarMoeda(item.valor)}</span>
-        `;
-
-        listaCartaoCredito.appendChild(div);
-    });
+    listaCartaoCredito.innerHTML = `
+        <div class="resumo-card-linha">
+            <span>${itens.length} lançamento(s) no cartão</span>
+            <strong>${formatarMoeda(total)}</strong>
+        </div>
+    `;
 }
 
 function renderizarParcelas(parcelas) {
-
-    console.log("PARCELAS RECEBIDAS:", parcelas);
-
     if (!listaParcelas) return;
 
-    if (!parcelas.length) {
+    detalhesParcelas = parcelas || [];
+    listaParcelas.innerHTML = "";
+
+    if (!detalhesParcelas.length) {
+        if (totalParcelasMes) totalParcelasMes.textContent = formatarMoeda(0);
+        if (parcelasResumoTitulo) parcelasResumoTitulo.textContent = "Total do mês";
         listaParcelas.textContent = "Nenhuma compra parcelada neste mês.";
         listaParcelas.classList.add("vazio");
         return;
     }
 
+    const totalMes = detalhesParcelas.reduce((total, item) => total + Number(item.valor || 0), 0);
+    const totalRestante = detalhesParcelas.reduce((total, item) => total + valorRestanteParcela(item), 0);
+
+    if (totalParcelasMes) totalParcelasMes.textContent = formatarMoeda(totalMes);
+    if (parcelasResumoTitulo) parcelasResumoTitulo.textContent = `${detalhesParcelas.length} parcela(s) neste mês`;
+
     listaParcelas.classList.remove("vazio");
-
-    parcelas.forEach(item => {
-        const div = document.createElement("div");
-        div.className = "item-dashboard item-parcela";
-
-        const progresso = formatarParcela(item.parcela, item.totalParcelas);
-        const restante = calcularRestanteParcela(item);
-        const mesAno = formatarMesAno(item.data);
-
-        div.innerHTML = `
-            <div>
-                <span class="principal">💳 ${capitalizar(item.descricao)}</span>
-                <span class="secundario">${progresso} • ${mesAno}${restante ? " • Restante: " + restante : ""}</span>
-            </div>
-            <span class="valor negativo">${formatarMoeda(item.valor)}</span>
-        `;
-
-        listaParcelas.appendChild(div);
-    });
+    listaParcelas.innerHTML = `
+        <div class="resumo-card-linha">
+            <span>Restante a pagar</span>
+            <strong>${formatarMoeda(totalRestante)}</strong>
+        </div>
+    `;
 }
 
 function renderizarUltimos(ultimos) {
@@ -886,61 +887,163 @@ function renderizarHistorico(dados) {
     totalPaginasHistorico = Number(dados.totalPaginas || 1);
 
     atualizarCabecalhoHistorico();
+    itensHistoricoAtuais = dados.itens || [];
+    renderizarHistoricoFiltrado();
+    atualizarPaginacaoHistorico();
+}
+
+function renderizarHistoricoFiltrado() {
+    if (!listaHistorico) return;
 
     listaHistorico.innerHTML = "";
 
-    const itens = dados.itens || [];
+    let itens = [...(itensHistoricoAtuais || [])];
+
+    if (filtroHistoricoAtual !== "todos") {
+        itens = itens.filter(item => {
+            const tipo = normalizarTextoComparacao(item.tipo);
+            const pagamento = normalizarTextoComparacao(item.pagamento);
+            const tipoRegistro = normalizarTextoComparacao(item.tipoRegistro);
+
+            if (filtroHistoricoAtual === "receitas") return tipo === "receita";
+            if (filtroHistoricoAtual === "despesas") return tipo === "despesa";
+            if (filtroHistoricoAtual === "cartao") return pagamento.includes("credito");
+            if (filtroHistoricoAtual === "parcelas") return tipoRegistro === "parcela";
+            if (filtroHistoricoAtual === "contas") return tipoRegistro.includes("conta fixa");
+            return true;
+        });
+    }
+
+    if (buscaHistoricoAtual) {
+        const busca = normalizarTextoComparacao(buscaHistoricoAtual);
+        itens = itens.filter(item => normalizarTextoComparacao([
+            item.descricao,
+            item.categoria,
+            item.pagamento,
+            item.pessoa,
+            item.tipoRegistro
+        ].join(" ")).includes(busca));
+    }
+
+    itens.sort((a, b) => {
+        const dataA = new Date(a.data).getTime() || 0;
+        const dataB = new Date(b.data).getTime() || 0;
+        if (dataB !== dataA) return dataB - dataA;
+        return Number(b.rowIndex || 0) - Number(a.rowIndex || 0);
+    });
 
     if (!itens.length) {
-        listaHistorico.textContent = "Nenhum lançamento neste mês.";
+        listaHistorico.textContent = "Nenhum lançamento encontrado.";
         listaHistorico.classList.add("vazio");
-        atualizarPaginacaoHistorico();
         return;
     }
 
     listaHistorico.classList.remove("vazio");
 
-    itens.forEach(item => {
-        const ehReceita = item.tipo === "Receita";
-        const div = document.createElement("div");
-        div.className = "item-dashboard item-historico";
+    const grupos = agruparHistoricoPorDia(itens);
 
-        div.innerHTML = `
+    grupos.forEach(grupo => {
+        const header = document.createElement("div");
+        header.className = "historico-dia-header";
+        header.innerHTML = `
             <div>
-                <span class="principal">${obterIconeCategoria(item.categoria, item.tipo)} ${capitalizar(item.descricao)}</span>
-                <span class="secundario">${formatarDataCurta(item.data)} • ${item.pessoa || ""} • ${item.categoria || "Outros"}${item.parcela ? " • " + item.parcela : ""}</span>
+                <strong>${grupo.titulo}</strong>
+                <span>${grupo.itens.length} lançamento(s)</span>
             </div>
-
-            <div class="historico-acoes">
-                <span class="valor ${ehReceita ? "positivo" : "negativo"}">${ehReceita ? "+" : "-"}${formatarMoeda(item.valor)}</span>
-                <button
-                    class="btn-editar-lancamento"
-                    type="button"
-                    aria-label="Editar lançamento"
-                    data-row-index="${item.rowIndex || ""}"
-                    data-item='${encodeURIComponent(JSON.stringify(item))}'>
-                    ✏️
-                </button>
-                <button
-                    class="btn-excluir-lancamento"
-                    type="button"
-                    aria-label="Excluir lançamento"
-                    data-row-index="${item.rowIndex || ""}"
-                    data-id-grupo="${item.idGrupo || ""}"
-                    data-tipo-registro="${item.tipoRegistro || ""}"
-                    data-descricao="${capitalizar(item.descricao)}">
-                    🗑
-                </button>
-            </div>
+            <small>Despesas ${formatarMoeda(grupo.despesas)}${grupo.receitas ? ` • Receitas ${formatarMoeda(grupo.receitas)}` : ""}</small>
         `;
+        listaHistorico.appendChild(header);
 
-        listaHistorico.appendChild(div);
+        grupo.itens.forEach(item => {
+            const ehReceita = item.tipo === "Receita";
+            const div = document.createElement("div");
+            div.className = "item-dashboard item-historico";
+
+            const detalheParcela = item.parcela ? ` • ${formatarParcela(item.parcela, item.totalParcelas)}` : "";
+            const detalhePagamento = item.pagamento || "Não informado";
+
+            div.innerHTML = `
+                <div>
+                    <span class="principal">${obterIconeCategoria(item.categoria, item.tipo)} ${capitalizar(item.descricao)}</span>
+                    <span class="secundario">${formatarDataCurta(item.data)} • ${detalhePagamento} • ${item.categoria || "Outros"}${detalheParcela}</span>
+                </div>
+
+                <div class="historico-acoes">
+                    <span class="valor ${ehReceita ? "positivo" : "negativo"}">${ehReceita ? "+" : "-"}${formatarMoeda(item.valor)}</span>
+                    <button
+                        class="btn-duplicar-lancamento"
+                        type="button"
+                        aria-label="Duplicar lançamento"
+                        data-item='${encodeURIComponent(JSON.stringify(item))}'>
+                        ⧉
+                    </button>
+                    <button
+                        class="btn-editar-lancamento"
+                        type="button"
+                        aria-label="Editar lançamento"
+                        data-row-index="${item.rowIndex || ""}"
+                        data-item='${encodeURIComponent(JSON.stringify(item))}'>
+                        ✏️
+                    </button>
+                    <button
+                        class="btn-excluir-lancamento"
+                        type="button"
+                        aria-label="Excluir lançamento"
+                        data-row-index="${item.rowIndex || ""}"
+                        data-id-grupo="${item.idGrupo || ""}"
+                        data-tipo-registro="${item.tipoRegistro || ""}"
+                        data-descricao="${capitalizar(item.descricao)}">
+                        🗑
+                    </button>
+                </div>
+            `;
+
+            listaHistorico.appendChild(div);
+        });
     });
-
-    atualizarPaginacaoHistorico();
 }
 
+async function duplicarLancamentoHistorico(botaoDuplicar) {
+    let item = null;
 
+    try {
+        item = JSON.parse(decodeURIComponent(botaoDuplicar.dataset.item || ""));
+    } catch (erro) {
+        item = null;
+    }
+
+    if (!item) {
+        mostrarToast("Não consegui duplicar o lançamento.", "erro");
+        return;
+    }
+
+    const confirmar = confirm(`Duplicar "${capitalizar(item.descricao)}" com a data de hoje?`);
+    if (!confirmar) return;
+
+    mostrarLoading("Duplicando lançamento...");
+
+    const resposta = await backendSalvar({
+        pessoa: item.pessoa || usuarioAtual,
+        tipo: item.tipo || "Despesa",
+        valor: Number(item.valor || 0),
+        categoria: item.categoria || "Outros",
+        descricao: item.descricao || "Sem descrição",
+        pagamento: item.pagamento || "Não informado",
+        tipoRegistro: "Único",
+        valorTotal: Number(item.valor || 0)
+    });
+
+    ocultarLoading();
+
+    if (!resposta || !resposta.ok) {
+        mostrarToast("Não consegui duplicar o lançamento.", "erro");
+        return;
+    }
+
+    mostrarToast("Lançamento duplicado.", "sucesso");
+    carregarDashboard(false);
+    carregarHistorico(false);
+}
 
 async function editarLancamentoHistorico(botaoEditar) {
     const rowIndex = Number(botaoEditar.dataset.rowIndex || 0);
@@ -1547,6 +1650,104 @@ function formatarMesAno(data) {
     return `${meses[d.getMonth()]}/${String(d.getFullYear()).slice(-2)}`;
 }
 
+
+function valorRestanteParcela(item) {
+    const match = String(item.parcela || "").match(/(\d+)\s*\/\s*(\d+)/);
+    const valor = Number(item.valor || 0);
+
+    if (!match || !valor) return valor;
+
+    const atual = Number(match[1]);
+    const total = Number(match[2]);
+    return Math.max(total - atual + 1, 0) * valor;
+}
+
+function formatarDataLonga(data) {
+    const d = new Date(data);
+
+    if (isNaN(d.getTime())) return "Sem data";
+
+    return d.toLocaleDateString("pt-BR", {
+        day: "2-digit",
+        month: "long"
+    });
+}
+
+function obterChaveDia(data) {
+    const d = new Date(data);
+
+    if (isNaN(d.getTime())) return "sem-data";
+
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
+function agruparHistoricoPorDia(itens) {
+    const mapa = new Map();
+
+    itens.forEach(item => {
+        const chave = obterChaveDia(item.data);
+
+        if (!mapa.has(chave)) {
+            mapa.set(chave, {
+                chave,
+                titulo: chave === "sem-data" ? "Sem data" : formatarDataLonga(item.data),
+                receitas: 0,
+                despesas: 0,
+                itens: []
+            });
+        }
+
+        const grupo = mapa.get(chave);
+        const valor = Number(item.valor || 0);
+
+        if (item.tipo === "Receita") grupo.receitas += valor;
+        else grupo.despesas += valor;
+
+        grupo.itens.push(item);
+    });
+
+    return Array.from(mapa.values()).sort((a, b) => b.chave.localeCompare(a.chave));
+}
+
+function abrirModalDetalhes(titulo, subtitulo, itens, tipo) {
+    if (!modalDetalhes || !modalDetalhesConteudo || !modalDetalhesTitulo) return;
+
+    modalDetalhesTitulo.textContent = titulo;
+    modalDetalhesSubtitulo.textContent = subtitulo || "";
+    modalDetalhesConteudo.innerHTML = "";
+
+    if (!itens || !itens.length) {
+        modalDetalhesConteudo.textContent = "Nenhum item encontrado.";
+        modalDetalhesConteudo.classList.add("vazio");
+    } else {
+        modalDetalhesConteudo.classList.remove("vazio");
+        itens.forEach(item => {
+            const div = document.createElement("div");
+            div.className = "item-dashboard";
+
+            const parcela = item.parcela ? `${formatarParcela(item.parcela, item.totalParcelas)} • ` : "";
+            const restante = tipo === "parcelas" ? valorRestanteParcela(item) : 0;
+            const detalheRestante = restante ? ` • Restante: ${formatarMoeda(restante)}` : "";
+
+            div.innerHTML = `
+                <div>
+                    <span class="principal">${tipo === "cartao" ? "💳" : "💳"} ${capitalizar(item.descricao)}</span>
+                    <span class="secundario">${parcela}${formatarDataCurta(item.data) || formatarMesAno(item.data)} • ${item.categoria || "Outros"}${detalheRestante}</span>
+                </div>
+                <span class="valor negativo">${formatarMoeda(item.valor)}</span>
+            `;
+
+            modalDetalhesConteudo.appendChild(div);
+        });
+    }
+
+    modalDetalhes.classList.remove("oculto");
+}
+
+function fecharModalDetalhes() {
+    if (modalDetalhes) modalDetalhes.classList.add("oculto");
+}
+
 function formatarDataInput(data) {
     const d = new Date(data);
 
@@ -1610,8 +1811,14 @@ if (btnFecharOpcoes) {
 
 if (listaHistorico) {
     listaHistorico.addEventListener("click", event => {
+        const botaoDuplicar = event.target.closest(".btn-duplicar-lancamento");
         const botaoEditar = event.target.closest(".btn-editar-lancamento");
         const botaoExcluir = event.target.closest(".btn-excluir-lancamento");
+
+        if (botaoDuplicar) {
+            duplicarLancamentoHistorico(botaoDuplicar);
+            return;
+        }
 
         if (botaoEditar) {
             editarLancamentoHistorico(botaoEditar);
@@ -1648,6 +1855,41 @@ modal.addEventListener("click", event => {
     if (botaoDetalhe) {
         editarDetalheContaFixa(botaoDetalhe.dataset.extraEdit);
     }
+});
+
+
+if (btnDetalhesCartao) {
+    btnDetalhesCartao.addEventListener("click", () => {
+        const total = detalhesCartaoCredito.reduce((soma, item) => soma + Number(item.valor || 0), 0);
+        abrirModalDetalhes("Cartão de crédito", `Fatura estimada: ${formatarMoeda(total)}`, detalhesCartaoCredito, "cartao");
+    });
+}
+
+if (btnDetalhesParcelas) {
+    btnDetalhesParcelas.addEventListener("click", () => {
+        const totalMes = detalhesParcelas.reduce((soma, item) => soma + Number(item.valor || 0), 0);
+        abrirModalDetalhes("Compras parceladas", `Total do mês: ${formatarMoeda(totalMes)}`, detalhesParcelas, "parcelas");
+    });
+}
+
+if (btnFecharDetalhes) {
+    btnFecharDetalhes.addEventListener("click", fecharModalDetalhes);
+}
+
+if (buscaHistorico) {
+    buscaHistorico.addEventListener("input", event => {
+        buscaHistoricoAtual = event.target.value || "";
+        renderizarHistoricoFiltrado();
+    });
+}
+
+botoesFiltroHistorico.forEach(botaoFiltro => {
+    botaoFiltro.addEventListener("click", () => {
+        botoesFiltroHistorico.forEach(btn => btn.classList.remove("ativo"));
+        botaoFiltro.classList.add("ativo");
+        filtroHistoricoAtual = botaoFiltro.dataset.filtro || "todos";
+        renderizarHistoricoFiltrado();
+    });
 });
 
 iniciarApp();
