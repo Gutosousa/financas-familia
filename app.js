@@ -120,6 +120,7 @@ let toastTimer = null;
 let usuarioAtual = localStorage.getItem(STORAGE_USUARIO) || "";
 let placeholderIndex = 0;
 let placeholderTimer = null;
+let modalOpcoesCancelamento = null;
 
 const dataHoje = new Date();
 let mesSelecionado = dataHoje.getMonth();
@@ -483,6 +484,15 @@ function editarCampo(campo) {
     }
 }
 
+
+function escolherPagamentoPagamentoConta() {
+    return new Promise(resolve => {
+        abrirModalOpcoes("Forma de pagamento", PAGAMENTOS_BASE.filter(item => item !== "Não informado"), pagamentoSelecionado => {
+            resolve(normalizarPagamento(pagamentoSelecionado));
+        }, "", false, () => resolve(null));
+    });
+}
+
 async function carregarDashboard(mostrarMensagem = false) {
     atualizarSeletorMes();
     mostrarLoading("Atualizando resumo...");
@@ -607,7 +617,7 @@ function renderizarContasPendentes(contas) {
 
     if (!contas.length) {
         cardContasPendentes.classList.add("oculto");
-        listaContasPendentes.textContent = "Nenhuma conta fixa pendente neste mês.";
+        listaContasPendentes.textContent = "Nenhuma conta fixa neste mês.";
         listaContasPendentes.classList.add("vazio");
         return;
     }
@@ -616,24 +626,29 @@ function renderizarContasPendentes(contas) {
     listaContasPendentes.classList.remove("vazio");
 
     contas.forEach(conta => {
+        const statusNormalizado = normalizarTextoComparacao(conta.status);
+        const pago = statusNormalizado === "pago";
+        const atrasada = statusNormalizado === "atrasado";
+
         const div = document.createElement("div");
-        div.className = `item-dashboard item-conta-pendente ${normalizarTextoComparacao(conta.status) === "atrasado" ? "atrasada" : ""}`;
+        div.className = `item-dashboard item-conta-pendente ${atrasada ? "atrasada" : ""} ${pago ? "paga" : ""}`;
 
         const ehVariavel = normalizarTextoComparacao(conta.tipoValor).includes("variavel");
         const valorLabel = ehVariavel
             ? (Number(conta.ultimoValorPago || 0) > 0 ? `Último: ${formatarMoeda(conta.ultimoValorPago)}` : "Valor variável")
             : formatarMoeda(conta.valorPrevisto || conta.valorPadrao || 0);
 
-        const statusIcone = normalizarTextoComparacao(conta.status) === "atrasado" ? "🔴" : "🟡";
+        const statusIcone = pago ? "🟢" : (atrasada ? "🔴" : "🟡");
+        const statusTexto = pago ? "Pago" : (atrasada ? "Em atraso" : "Pendente");
         const iconeConta = obterIconeConta(conta.descricao, conta.categoria);
         const textoVencimento = textoVencimentoConta(conta.dia);
 
         div.innerHTML = `
             <div>
                 <span class="principal">${statusIcone} ${iconeConta} ${capitalizar(conta.descricao)}</span>
-                <span class="secundario">${textoVencimento} • ${valorLabel}</span>
+                <span class="secundario">${statusTexto} • ${textoVencimento} • ${valorLabel}</span>
             </div>
-            <button class="btn-pagar-conta" type="button" data-id-conta="${conta.id}" data-tipo-valor="${conta.tipoValor}" data-valor="${conta.valorPrevisto || conta.valorPadrao || 0}" data-ultimo-valor="${conta.ultimoValorPago || 0}" data-descricao="${capitalizar(conta.descricao)}">Pagar</button>
+            ${pago ? `<span class="badge-pago">Pago</span>` : `<button class="btn-pagar-conta" type="button" data-id-conta="${conta.id}" data-tipo-valor="${conta.tipoValor}" data-valor="${conta.valorPrevisto || conta.valorPadrao || 0}" data-ultimo-valor="${conta.ultimoValorPago || 0}" data-descricao="${capitalizar(conta.descricao)}">Pagar</button>`}
         `;
 
         listaContasPendentes.appendChild(div);
@@ -649,9 +664,7 @@ async function pagarContaPendente(botaoPagar) {
 
     if (ehVariavel) {
         const ultimoValor = Number(botaoPagar.dataset.ultimoValor || 0);
-        const texto = ultimoValor > 0 ? `Valor pago para ${descricao}:
-
-Último pagamento: ${formatarMoeda(ultimoValor)}` : `Valor pago para ${descricao}:`;
+        const texto = ultimoValor > 0 ? `Valor pago para ${descricao}:\n\nÚltimo pagamento: ${formatarMoeda(ultimoValor)}` : `Valor pago para ${descricao}:`;
         const valorDigitado = prompt(texto, ultimoValor > 0 ? String(ultimoValor).replace(".", ",") : "");
 
         if (valorDigitado === null) return;
@@ -662,10 +675,17 @@ async function pagarContaPendente(botaoPagar) {
             mostrarToast("Valor inválido.", "erro");
             return;
         }
-    } else {
-        const confirmar = confirm(`Marcar "${descricao}" como paga por ${formatarMoeda(valor)}?`);
-        if (!confirmar) return;
     }
+
+    const pagamento = await escolherPagamentoPagamentoConta();
+
+    if (!pagamento) {
+        return;
+    }
+
+    const confirmar = confirm(`Marcar "${descricao}" como paga por ${formatarMoeda(valor)} via ${pagamento}?`);
+
+    if (!confirmar) return;
 
     botaoPagar.disabled = true;
     mostrarLoading("Registrando pagamento...");
@@ -673,6 +693,7 @@ async function pagarContaPendente(botaoPagar) {
     const resposta = await backendPagarContaFixa({
         idConta,
         valor,
+        pagamento,
         pessoa: usuarioAtual,
         mes: mesSelecionado,
         ano: anoSelecionado
@@ -686,7 +707,7 @@ async function pagarContaPendente(botaoPagar) {
         return;
     }
 
-    mostrarToast("Conta paga e lançada no histórico.", "sucesso");
+    mostrarToast("Conta marcada como paga.", "sucesso");
     carregarDashboard(false);
     carregarHistorico(false);
 }
@@ -735,12 +756,16 @@ function renderizarParcelas(parcelas) {
 
     parcelas.forEach(item => {
         const div = document.createElement("div");
-        div.className = "item-dashboard";
+        div.className = "item-dashboard item-parcela";
+
+        const progresso = formatarParcela(item.parcela, item.totalParcelas);
+        const restante = calcularRestanteParcela(item);
+        const mesAno = formatarMesAno(item.data);
 
         div.innerHTML = `
             <div>
-                <span class="principal">${obterIconeCategoria(item.categoria)} ${capitalizar(item.descricao)}</span>
-                <span class="secundario">${item.parcela || ""} • ${item.categoria || "Outros"}</span>
+                <span class="principal">💳 ${capitalizar(item.descricao)}</span>
+                <span class="secundario">${progresso} • ${mesAno}${restante ? " • Restante: " + restante : ""}</span>
             </div>
             <span class="valor negativo">${formatarMoeda(item.valor)}</span>
         `;
@@ -840,6 +865,14 @@ function renderizarHistorico(dados) {
             <div class="historico-acoes">
                 <span class="valor ${ehReceita ? "positivo" : "negativo"}">${ehReceita ? "+" : "-"}${formatarMoeda(item.valor)}</span>
                 <button
+                    class="btn-editar-lancamento"
+                    type="button"
+                    aria-label="Editar lançamento"
+                    data-row-index="${item.rowIndex || ""}"
+                    data-item='${encodeURIComponent(JSON.stringify(item))}'>
+                    ✏️
+                </button>
+                <button
                     class="btn-excluir-lancamento"
                     type="button"
                     aria-label="Excluir lançamento"
@@ -858,6 +891,91 @@ function renderizarHistorico(dados) {
     atualizarPaginacaoHistorico();
 }
 
+
+
+async function editarLancamentoHistorico(botaoEditar) {
+    const rowIndex = Number(botaoEditar.dataset.rowIndex || 0);
+    let item = null;
+
+    try {
+        item = JSON.parse(decodeURIComponent(botaoEditar.dataset.item || ""));
+    } catch (erro) {
+        item = null;
+    }
+
+    if (!rowIndex || !item) {
+        mostrarToast("Não consegui carregar o lançamento.", "erro");
+        return;
+    }
+
+    const descricao = prompt("Descrição:", item.descricao || "");
+    if (descricao === null) return;
+
+    const valorTexto = prompt("Valor:", String(item.valor || 0).replace(".", ","));
+    if (valorTexto === null) return;
+
+    const valor = normalizarNumero(valorTexto);
+    if (!valor || valor <= 0) {
+        mostrarToast("Valor inválido.", "erro");
+        return;
+    }
+
+    const dataTexto = prompt("Data (AAAA-MM-DD):", formatarDataInput(item.data));
+    if (dataTexto === null) return;
+
+    const tipo = await escolherOpcaoAsync("Tipo", TIPOS_LANCAMENTO, item.tipo || "Despesa");
+    if (!tipo) return;
+
+    const categoria = await escolherCategoriaAsync(item.categoria || "Outros");
+    if (!categoria) return;
+
+    const pagamento = await escolherOpcaoAsync("Pagamento", PAGAMENTOS_BASE, item.pagamento || "Não informado");
+    if (!pagamento) return;
+
+    mostrarLoading("Editando lançamento...");
+
+    const resposta = await backendEditarLancamento({
+        rowIndex,
+        descricao: descricao.trim() || "Sem descrição",
+        valor,
+        data: dataTexto,
+        tipo: normalizarTipo(tipo),
+        categoria: capitalizar(categoria),
+        pagamento: normalizarPagamento(pagamento),
+        pessoa: item.pessoa || usuarioAtual
+    });
+
+    ocultarLoading();
+
+    if (!resposta || !resposta.ok) {
+        mostrarToast("Não consegui editar o lançamento.", "erro");
+        return;
+    }
+
+    mostrarToast("Lançamento editado.", "sucesso");
+    carregarDashboard(false);
+    carregarHistorico(false);
+}
+
+function escolherOpcaoAsync(titulo, opcoes, valorAtual = "") {
+    return new Promise(resolve => {
+        abrirModalOpcoes(titulo, opcoes, opcao => resolve(opcao), valorAtual, false, () => resolve(null));
+    });
+}
+
+function escolherCategoriaAsync(valorAtual = "Outros") {
+    return new Promise(resolve => {
+        abrirModalOpcoes("Categoria", obterCategoriasDisponiveis(), categoriaSelecionada => {
+            if (categoriaSelecionada === "__nova__") {
+                const nova = prompt("Nova categoria:");
+                resolve(nova ? capitalizar(nova.trim()) : null);
+                return;
+            }
+
+            resolve(categoriaSelecionada);
+        }, valorAtual, true, () => resolve(null));
+    });
+}
 
 async function excluirLancamentoHistorico(botaoExcluir) {
     const rowIndex = Number(botaoExcluir.dataset.rowIndex || 0);
@@ -1068,9 +1186,10 @@ function trocarTela(tela) {
     }
 }
 
-function abrirModalOpcoes(titulo, opcoes, aoSelecionar, valorAtual = "", incluirNovaCategoria = false) {
+function abrirModalOpcoes(titulo, opcoes, aoSelecionar, valorAtual = "", incluirNovaCategoria = false, aoCancelar = null) {
     if (!modalOpcoes || !modalOpcoesLista || !modalOpcoesTitulo) return;
 
+    modalOpcoesCancelamento = typeof aoCancelar === "function" ? aoCancelar : null;
     modalOpcoesTitulo.textContent = titulo;
     modalOpcoesLista.innerHTML = "";
 
@@ -1086,6 +1205,7 @@ function abrirModalOpcoes(titulo, opcoes, aoSelecionar, valorAtual = "", incluir
         `;
 
         botaoOpcao.addEventListener("click", () => {
+            modalOpcoesCancelamento = null;
             fecharModalOpcoes();
             aoSelecionar(opcao);
         });
@@ -1100,6 +1220,7 @@ function abrirModalOpcoes(titulo, opcoes, aoSelecionar, valorAtual = "", incluir
         botaoNova.innerHTML = "<span>➕ Nova categoria</span>";
 
         botaoNova.addEventListener("click", () => {
+            modalOpcoesCancelamento = null;
             fecharModalOpcoes();
             aoSelecionar("__nova__");
         });
@@ -1113,6 +1234,12 @@ function abrirModalOpcoes(titulo, opcoes, aoSelecionar, valorAtual = "", incluir
 function fecharModalOpcoes() {
     if (modalOpcoes) {
         modalOpcoes.classList.add("oculto");
+    }
+
+    if (modalOpcoesCancelamento) {
+        const callback = modalOpcoesCancelamento;
+        modalOpcoesCancelamento = null;
+        callback();
     }
 }
 
@@ -1330,6 +1457,61 @@ function obterIconeBeneficio(nome = "") {
     return "🎁";
 }
 
+
+function formatarParcela(parcela, totalParcelas) {
+    const texto = String(parcela || "").trim();
+
+    if (texto.includes("/")) {
+        return texto.replace("/", "/");
+    }
+
+    if (parcela && totalParcelas) {
+        return `${parcela}/${totalParcelas}`;
+    }
+
+    return "Parcela";
+}
+
+function calcularRestanteParcela(item) {
+    const match = String(item.parcela || "").match(/(\d+)\s*\/\s*(\d+)/);
+    const valor = Number(item.valor || 0);
+
+    if (!match || !valor) return "";
+
+    const atual = Number(match[1]);
+    const total = Number(match[2]);
+    const restantes = Math.max(total - atual + 1, 0);
+
+    if (!restantes) return "";
+
+    return formatarMoeda(restantes * valor);
+}
+
+function formatarMesAno(data) {
+    const d = new Date(data);
+
+    if (isNaN(d.getTime())) {
+        return "";
+    }
+
+    const meses = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
+    return `${meses[d.getMonth()]}/${String(d.getFullYear()).slice(-2)}`;
+}
+
+function formatarDataInput(data) {
+    const d = new Date(data);
+
+    if (isNaN(d.getTime())) {
+        return "";
+    }
+
+    const ano = d.getFullYear();
+    const mes = String(d.getMonth() + 1).padStart(2, "0");
+    const dia = String(d.getDate()).padStart(2, "0");
+
+    return `${ano}-${mes}-${dia}`;
+}
+
 function iniciarPlaceholders() {
     if (!input) return;
 
@@ -1379,7 +1561,13 @@ if (btnFecharOpcoes) {
 
 if (listaHistorico) {
     listaHistorico.addEventListener("click", event => {
+        const botaoEditar = event.target.closest(".btn-editar-lancamento");
         const botaoExcluir = event.target.closest(".btn-excluir-lancamento");
+
+        if (botaoEditar) {
+            editarLancamentoHistorico(botaoEditar);
+            return;
+        }
 
         if (botaoExcluir) {
             excluirLancamentoHistorico(botaoExcluir);
