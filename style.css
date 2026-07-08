@@ -1129,3 +1129,38 @@ select:focus {
         gap: 10px;
     }
 }
+
+
+.item-conta-pendente.paga {
+    opacity: .72;
+}
+
+.badge-pago {
+    padding: 8px 10px;
+    border-radius: 999px;
+    background: var(--verde-bg);
+    color: var(--verde-texto);
+    font-size: 12px;
+    font-weight: 800;
+    white-space: nowrap;
+}
+
+.btn-editar-lancamento,
+.btn-excluir-lancamento {
+    width: 34px;
+    height: 34px;
+    border-radius: 12px;
+    background: #F3F4F6;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 15px;
+}
+
+.btn-editar-lancamento {
+    margin-left: 8px;
+}
+
+.item-parcela .secundario {
+    line-height: 1.35;
+}
