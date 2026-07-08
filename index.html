@@ -108,11 +108,12 @@
                         <p class="texto-apoio pequeno">Fatura estimada do mês, considerando compras à vista e parcelas.</p>
                     </div>
                 </div>
-                <div class="cartao-total">
+                <button id="btnDetalhesCartao" class="cartao-total card-resumo-acao" type="button">
                     <span>Fatura estimada</span>
                     <strong id="totalCartaoCredito">R$ 0,00</strong>
-                </div>
-                <div id="listaCartaoCredito" class="lista-dashboard vazio">Carregando...</div>
+                    <small>Ver detalhes →</small>
+                </button>
+                <div id="listaCartaoCredito" class="lista-dashboard vazio lista-resumo-card">Carregando...</div>
             </section>
 
             <section class="card bloco-dashboard">
@@ -120,9 +121,14 @@
                 <div id="listaCategorias" class="lista-dashboard vazio">Carregando...</div>
             </section>
 
-            <section class="card bloco-dashboard">
+            <section id="cardParcelas" class="card bloco-dashboard">
                 <h2>Compras parceladas</h2>
-                <div id="listaParcelas" class="lista-dashboard vazio">Carregando...</div>
+                <button id="btnDetalhesParcelas" class="cartao-total card-resumo-acao" type="button">
+                    <span id="parcelasResumoTitulo">Total do mês</span>
+                    <strong id="totalParcelasMes">R$ 0,00</strong>
+                    <small>Ver detalhes →</small>
+                </button>
+                <div id="listaParcelas" class="lista-dashboard vazio lista-resumo-card">Carregando...</div>
             </section>
         </section>
 
@@ -142,6 +148,17 @@
 
             <section class="card bloco-dashboard">
                 <h2>Lançamentos do mês</h2>
+                <div class="historico-filtros">
+                    <input id="buscaHistorico" type="search" placeholder="Buscar no histórico..." autocomplete="off">
+                    <div class="filtros-chip">
+                        <button class="filtro-historico ativo" type="button" data-filtro="todos">Todos</button>
+                        <button class="filtro-historico" type="button" data-filtro="receitas">Receitas</button>
+                        <button class="filtro-historico" type="button" data-filtro="despesas">Despesas</button>
+                        <button class="filtro-historico" type="button" data-filtro="cartao">Cartão</button>
+                        <button class="filtro-historico" type="button" data-filtro="parcelas">Parcelas</button>
+                        <button class="filtro-historico" type="button" data-filtro="contas">Contas fixas</button>
+                    </div>
+                </div>
                 <div id="listaHistorico" class="lista-dashboard vazio">Carregando...</div>
 
                 <div class="historico-paginacao">
@@ -224,6 +241,20 @@
                 <button id="btnEditar" class="btn-secundario" type="button">Voltar</button>
                 <button id="btnConfirmar" class="btn-primario" type="button">Salvar</button>
             </div>
+        </div>
+    </div>
+
+
+    <div id="modalDetalhes" class="modal oculto">
+        <div class="modal-card modal-detalhes-card">
+            <div class="modal-header">
+                <div>
+                    <h2 id="modalDetalhesTitulo">Detalhes</h2>
+                    <p id="modalDetalhesSubtitulo" class="texto-apoio pequeno"></p>
+                </div>
+            </div>
+            <div id="modalDetalhesConteudo" class="lista-dashboard"></div>
+            <button id="btnFecharDetalhes" class="btn-secundario" type="button">Fechar</button>
         </div>
     </div>
 
