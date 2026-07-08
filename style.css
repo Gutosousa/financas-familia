@@ -1191,3 +1191,132 @@ select:focus {
 .item-cartao .principal {
     color: var(--texto);
 }
+
+
+/* Beta 0.9.4 - Dashboard resumida e histórico organizado */
+.card-resumo-acao {
+    width: 100%;
+    border: 0;
+    cursor: pointer;
+    text-align: left;
+}
+
+.card-resumo-acao small {
+    color: var(--verde);
+    font-weight: 800;
+    white-space: nowrap;
+}
+
+.lista-resumo-card {
+    margin-top: 8px;
+}
+
+.resumo-card-linha {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    color: var(--cinza);
+    font-weight: 700;
+}
+
+.resumo-card-linha strong {
+    color: var(--texto);
+}
+
+.modal-detalhes-card {
+    max-height: 82vh;
+    overflow: auto;
+}
+
+.modal-detalhes-card #modalDetalhesConteudo {
+    margin-top: 8px;
+}
+
+.historico-filtros {
+    display: grid;
+    gap: 10px;
+    margin: 12px 0 16px;
+}
+
+.historico-filtros input {
+    width: 100%;
+    border: 1px solid #E5E7EB;
+    border-radius: 16px;
+    padding: 13px 14px;
+    font-size: 15px;
+    background: #F9FAFB;
+}
+
+.filtros-chip {
+    display: flex;
+    gap: 8px;
+    overflow-x: auto;
+    padding-bottom: 2px;
+}
+
+.filtro-historico {
+    flex: 0 0 auto;
+    padding: 9px 12px;
+    border-radius: 999px;
+    background: #F3F4F6;
+    color: var(--cinza);
+    font-size: 13px;
+    font-weight: 800;
+}
+
+.filtro-historico.ativo {
+    background: var(--verde-bg);
+    color: var(--verde-texto);
+}
+
+.historico-dia-header {
+    margin: 18px 0 8px;
+    padding: 12px 14px;
+    border-radius: 16px;
+    background: #F9FAFB;
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    align-items: center;
+}
+
+.historico-dia-header strong {
+    display: block;
+    color: var(--texto);
+}
+
+.historico-dia-header span,
+.historico-dia-header small {
+    color: var(--cinza);
+    font-size: 12px;
+    font-weight: 700;
+}
+
+.btn-duplicar-lancamento,
+.btn-editar-lancamento,
+.btn-excluir-lancamento {
+    width: 34px;
+    height: 34px;
+    border-radius: 12px;
+    background: #F3F4F6;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 15px;
+}
+
+.btn-duplicar-lancamento {
+    margin-left: 8px;
+}
+
+@media (max-width: 520px) {
+    .historico-dia-header {
+        align-items: flex-start;
+        flex-direction: column;
+    }
+
+    .cartao-total {
+        align-items: flex-start;
+    }
+}
