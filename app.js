@@ -105,6 +105,9 @@ const cardContasPendentes = document.getElementById("cardContasPendentes");
 const listaContasPendentes = document.getElementById("listaContasPendentes");
 const cardBeneficios = document.getElementById("cardBeneficios");
 const listaBeneficios = document.getElementById("listaBeneficios");
+const cardCartaoCredito = document.getElementById("cardCartaoCredito");
+const totalCartaoCredito = document.getElementById("totalCartaoCredito");
+const listaCartaoCredito = document.getElementById("listaCartaoCredito");
 const listaParcelas = document.getElementById("listaParcelas");
 const listaUltimos = document.getElementById("listaUltimos");
 
@@ -510,6 +513,11 @@ async function carregarDashboard(mostrarMensagem = false) {
         listaBeneficios.classList.add("vazio");
     }
 
+    if (listaCartaoCredito) {
+        listaCartaoCredito.textContent = "Carregando...";
+        listaCartaoCredito.classList.add("vazio");
+    }
+
     if (listaParcelas) {
         listaParcelas.textContent = "Carregando...";
         listaParcelas.classList.add("vazio");
@@ -577,6 +585,7 @@ function renderizarDashboard(dados) {
 
     renderizarContasPendentes(dados.contasPendentes || []);
     renderizarBeneficios(dados.beneficios || []);
+    renderizarCartaoCredito(dados.cartaoCredito || null);
     renderizarCategorias(dados.categorias || []);
     renderizarParcelas(dados.parcelas || []);
 
@@ -738,6 +747,45 @@ function renderizarBeneficios(beneficios) {
             <span class="valor positivo">${formatarMoeda(item.total)}</span>
         `;
         listaBeneficios.appendChild(div);
+    });
+}
+
+function renderizarCartaoCredito(cartao) {
+    if (!cardCartaoCredito || !listaCartaoCredito || !totalCartaoCredito) return;
+
+    const itens = cartao && Array.isArray(cartao.itens) ? cartao.itens : [];
+    const total = cartao ? Number(cartao.total || 0) : 0;
+
+    listaCartaoCredito.innerHTML = "";
+    totalCartaoCredito.textContent = formatarMoeda(total);
+
+    if (!itens.length) {
+        cardCartaoCredito.classList.add("oculto");
+        listaCartaoCredito.textContent = "Nenhum gasto no cartão de crédito neste mês.";
+        listaCartaoCredito.classList.add("vazio");
+        return;
+    }
+
+    cardCartaoCredito.classList.remove("oculto");
+    listaCartaoCredito.classList.remove("vazio");
+
+    itens.forEach(item => {
+        const div = document.createElement("div");
+        div.className = "item-dashboard item-cartao";
+
+        const detalheParcela = item.parcela ? `${formatarParcela(item.parcela, item.totalParcelas)} • ` : "";
+        const detalheData = formatarDataCurta(item.data) || formatarMesAno(item.data);
+        const detalheCategoria = item.categoria || "Outros";
+
+        div.innerHTML = `
+            <div>
+                <span class="principal">💳 ${capitalizar(item.descricao)}</span>
+                <span class="secundario">${detalheParcela}${detalheData} • ${detalheCategoria}</span>
+            </div>
+            <span class="valor negativo">${formatarMoeda(item.valor)}</span>
+        `;
+
+        listaCartaoCredito.appendChild(div);
     });
 }
 
